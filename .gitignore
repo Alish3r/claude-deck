@@ -1,0 +1,18 @@
+# Anthropic extension bundle copies (pristine AND patched) — proprietary code,
+# never distribute. Regenerate from the local install + patcher instead.
+spike/pristine/
+spike/patched/
+
+# User's global Claude settings backup — private config, local reference only
+spike/settings-baseline.json
+
+# Local state / caches
+.claude-flow/
+.claude/settings.local.json
+node_modules/
+dist/
+*.tsbuildinfo
+
+# OS noise
+Thumbs.db
+.DS_Store

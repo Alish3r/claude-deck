@@ -1,0 +1,95 @@
+name: Chore / tech debt
+description: Internal cleanup, CI, refactors, or small maintenance without user-facing feature work
+labels: ["tech-debt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Chore / tech debt
+        Use for **non-product** cleanup, dependency hygiene, CI, refactors, or docs that are not a user story.
+        Tickets must still be **retraceable** — see `AGENTS.md` → *Issue body must be retraceable*.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs doing?
+      description: Concrete scope — what files, systems, or behaviors are affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why now?
+      description: Risk avoided, time saved, or debt being paid down.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      description: Primary area (drives labels).
+      options:
+        - patch
+        - companion
+        - plugin
+        - hub
+        - lcd
+        - docs
+        - ops
+        - security
+        - research
+        - ux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated effort
+      options:
+        - "XS — <0.5 AI credits"
+        - "S — 0.5-1 AI credits"
+        - "M — 1-3 AI credits"
+        - "L — 3-8 AI credits"
+        - "XL — 8+ AI credits"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope boundaries
+      description: In-scope vs explicitly out-of-scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist for done.
+      placeholder: |
+        - [ ] …
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Commands, CI jobs, or checks to run after merge.
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_issues
+    attributes:
+      label: Related issues and overlap check
+      description: |
+        `Related: #nnn` or **Related: none** with what you searched.
+      placeholder: |
+        Related: none — searched "ruff", "ci workflow".
+    validations:
+      required: true

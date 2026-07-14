@@ -1,0 +1,103 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        **Tickets must be retraceable** — explain *what*, *why*, *scope*, *acceptance*, and *verification*. A title plus two lines is not enough for implementation work. See `.claude/rules/issue-driven-workflow.md`.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What do you want to build? Include enough context that someone unfamiliar could pick up the ticket months later (multi-paragraph is expected for non-trivial work).
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed? What problem does it solve?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - patch
+        - companion
+        - plugin
+        - hub
+        - lcd
+        - docs
+        - ops
+        - security
+        - research
+        - ux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated effort
+      options:
+        - "XS — <0.5 AI credits"
+        - "S — 0.5-1 AI credits"
+        - "M — 1-3 AI credits"
+        - "L — 3-8 AI credits"
+        - "XL — 8+ AI credits"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope boundaries
+      description: What is explicitly **in** and **out** of scope for this ticket.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How do we know this is done? Use a checklist; each item should be testable where possible.
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How will we validate the feature after merge (manual steps, URLs, commands, sample data)?
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_issues
+    attributes:
+      label: Related issues and overlap check
+      description: |
+        Link all epics, blocking issues, and parallel work (`#nnn`). If none, **Related: none** plus what you searched to avoid duplicate scope.
+      placeholder: |
+        Related: #178
+        Overlap search: "admin reports export"; no open duplicate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about.
+    validations:
+      required: false

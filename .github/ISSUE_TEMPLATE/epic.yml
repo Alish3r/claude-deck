@@ -1,0 +1,68 @@
+name: Epic
+description: Large initiative decomposed into user stories
+labels: ["epic", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Epic
+        Epics group related user stories into a single initiative.
+        Epics get **only** `epic` + `enhancement` labels — no priority/domain/effort.
+
+        **Retraceability:** the description and motivation must be rich enough that anyone (or an AI) can understand the initiative’s *why*, *boundaries*, and *success shape* without reading every linked story first. See `.claude/rules/issue-driven-workflow.md`.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is this initiative about? (Substantive narrative — not a two-line summary.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Business motivation
+      description: Why does this matter? What user/business outcome does it drive?
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_issues
+    attributes:
+      label: Related issues and overlap check
+      description: |
+        Link predecessor epics, security phases, or initiatives this epic extends (`#nnn`), or **Related: none** with search notes if this is net-new.
+      placeholder: |
+        Related: #265, #266
+    validations:
+      required: true
+
+  - type: textarea
+    id: stories
+    attributes:
+      label: User stories
+      description: Break this down into deliverable stories.
+      placeholder: |
+        - [ ] #N Story title
+        - [ ] #N Story title
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: What does "complete" look like for the whole epic?
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and dependencies
+      description: What could block or complicate this?
+    validations:
+      required: false
