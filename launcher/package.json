@@ -1,0 +1,15 @@
+{
+  "name": "claude-deck-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "claude-deck": "bin/claude-deck.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "^1.1.0"
+  }
+}
