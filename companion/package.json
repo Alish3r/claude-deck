@@ -1,0 +1,16 @@
+{
+  "name": "claude-deck-patcher",
+  "displayName": "Claude Deck Patcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Applies and maintains the Claude Deck bridge patch on the Claude Code extension; re-patches on updates.",
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./src/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "claudeDeck.repatch", "title": "Claude Deck: Re-apply bridge patch" },
+      { "command": "claudeDeck.revert", "title": "Claude Deck: Revert bridge patch (restore pristine)" }
+    ]
+  }
+}
