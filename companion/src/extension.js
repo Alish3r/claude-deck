@@ -9,13 +9,24 @@
 // The decision/health logic it relies on IS unit-tested (companion/logic.test.mjs).
 
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
+const { pathToFileURL } = require('url');
 
 let statusBar;
 
+// The patcher lives in the claude-deck repo. When installed into the VS Code extensions
+// dir, `install.mjs` bakes the repo's absolute path into repo-path.json (sibling of this
+// file's parent). Running from the repo (dev), fall back to the repo-relative location.
+function repoRoot() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'repo-path.json'), 'utf8')).repo; }
+  catch { return path.join(__dirname, '..', '..'); } // dev: companion/src -> repo root
+}
+
 // patch/* and logic.mjs are ESM; load them from this CJS module via dynamic import.
 async function libs() {
-  const patcher = await import('../../patch/patcher.js');
-  const logic = await import('./logic.mjs');
+  const patcher = await import(pathToFileURL(path.join(repoRoot(), 'patch', 'patcher.js')).href);
+  const logic = await import(pathToFileURL(path.join(__dirname, 'logic.mjs')).href);
   return { patcher, logic };
 }
 

@@ -1,6 +1,7 @@
 {
   "name": "claude-deck-patcher",
   "displayName": "Claude Deck Patcher",
+  "publisher": "alisher",
   "version": "0.1.0",
   "private": true,
   "description": "Applies and maintains the Claude Deck bridge patch on the Claude Code extension; re-patches on updates.",

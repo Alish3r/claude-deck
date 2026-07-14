@@ -164,7 +164,10 @@ export function checkSyntax(label, content) {
   const tmp = join(tmpdir(), `cd-check-${process.pid}-${label.replace(/\W/g, '_')}.js`);
   try {
     writeFileSync(tmp, content);
-    execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
+    // ELECTRON_RUN_AS_NODE=1 makes process.execPath behave as node when we're running
+    // inside VS Code's extension host (where execPath is Code.exe/Electron, not node).
+    // Under the plain-node CLI this env var is ignored — so it's correct in both contexts.
+    execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
   } catch (e) {
     const msg = (e.stderr || e.stdout || e.message).toString().split('\n').slice(0, 4).join('\n');
     throw new Error(`node --check failed for ${label}:\n${msg}`);
