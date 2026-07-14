@@ -11,13 +11,15 @@
 // VS Code extensions directory (the LIVE extension). apply/revert against the live
 // extension are consequential — this repo's workflow gates them on human approval.
 
-import { locateExtensionDir, status, verify, apply, revert } from './patcher.js';
+import { locateExtensionDir, status, verify, apply, revert, guardedApply } from './patcher.js';
 
 function parseArgs(argv) {
   const args = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') args.dryRun = true;
+    else if (a === '--guard') args.guard = true;
+    else if (a === '--timeout') args.timeout = Number(argv[++i]);
     else if (a === '--dir') args.dir = argv[++i];
     else if (a === '--help' || a === '-h') args.help = true;
     else args._.push(a);
@@ -28,8 +30,11 @@ function parseArgs(argv) {
 const USAGE = `claude-deck patch CLI
   node patch/cli.mjs status  [--dir <ext-dir>]
   node patch/cli.mjs verify  [--dir <ext-dir>]
-  node patch/cli.mjs apply   [--dir <ext-dir>] [--dry-run]
-  node patch/cli.mjs revert  [--dir <ext-dir>]`;
+  node patch/cli.mjs apply   [--dir <ext-dir>] [--dry-run] [--guard [--timeout <ms>]]
+  node patch/cli.mjs revert  [--dir <ext-dir>]
+
+  --guard   apply, then auto-revert unless the patched host emits a fresh
+            heartbeat within --timeout ms (default 10000) of you reloading.`;
 
 function resolveDir(args) {
   const dir = args.dir || locateExtensionDir();
@@ -63,8 +68,20 @@ function main() {
         break;
       }
       case 'apply': {
-        const r = apply(resolveDir(args), { dryRun: args.dryRun });
-        console.log(r.dryRun ? `dry-run OK — would patch: ${r.wouldPatch.join(', ')}` : `applied (v${r.version})`);
+        const dir = resolveDir(args);
+        if (args.guard) {
+          const timeoutMs = args.timeout ?? 10_000;
+          console.log(`applied — reload the VS Code window now; watching ${Math.round(timeoutMs / 1000)}s for the host heartbeat…`);
+          guardedApply(dir, { timeoutMs })
+            .then((r) => {
+              if (r.alive) console.log(`host alive after ${r.waitedMs}ms — patch confirmed (v1)`);
+              else { console.error(`no heartbeat within ${timeoutMs}ms — AUTO-REVERTED to pristine`); process.exitCode = 1; }
+            })
+            .catch((e) => { console.error(`error: ${e.message}`); process.exitCode = 1; });
+        } else {
+          const r = apply(dir, { dryRun: args.dryRun });
+          console.log(r.dryRun ? `dry-run OK — would patch: ${r.wouldPatch.join(', ')}` : `applied (v${r.version})`);
+        }
         break;
       }
       case 'revert': {

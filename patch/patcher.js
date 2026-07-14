@@ -16,6 +16,7 @@ import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { STEPS, VERIFY_ONLY, FILES, MARK, PATCH_VERSION, countMatches } from './anchors.js';
+import { waitForAlive, heartbeatPath } from './heartbeat.js';
 
 const STATE_FILE = '.cd-state.json';
 const LOCK_FILE = '.cd-lock.json';
@@ -157,7 +158,9 @@ function releaseLock(dir) { try { rmSync(lockPath(dir), { force: true }); } catc
 
 // --- node --check gate ------------------------------------------------------
 
-function assertParses(label, content) {
+// Stage 1 of the canary: does the content PARSE? Throws with the first lines of the
+// node error on failure. Exported so it can be exercised directly.
+export function checkSyntax(label, content) {
   const tmp = join(tmpdir(), `cd-check-${process.pid}-${label.replace(/\W/g, '_')}.js`);
   try {
     writeFileSync(tmp, content);
@@ -194,7 +197,7 @@ export function apply(dir, { dryRun = false } = {}) {
     const patched = {};
     for (const file of Object.keys(FILES)) {
       patched[file] = patchOne(file, pristine[file]);
-      assertParses(FILES[file], patched[file]);
+      checkSyntax(FILES[file], patched[file]);
     }
 
     if (dryRun) return { dir, dryRun: true, verified: true, wouldPatch: Object.keys(FILES) };
@@ -274,4 +277,27 @@ export function revert(dir) {
   } finally {
     releaseLock(dir);
   }
+}
+
+// Stage 2 of the canary. apply(), then wait for a FRESH host heartbeat (emitted at or
+// after we armed) proving the injected code linked at runtime. If none arrives within
+// `timeoutMs`, AUTO-REVERT to pristine. The reload that makes the new host emit its
+// heartbeat is triggered outside this function (the companion prompts the user, or a
+// test supplies `onArmed`); we only arm, wait, and roll back on failure.
+//
+// Returns { applied, alive, reverted, waitedMs, heartbeat }.
+export async function guardedApply(dir, {
+  timeoutMs = 10_000,
+  hbPath = heartbeatPath(),
+  onArmed,               // optional: called after apply, before waiting (reload hook / test seam)
+} = {}) {
+  const since = Date.now();          // capture BEFORE apply so only a post-arm heartbeat counts
+  apply(dir);                        // throws on anchor/syntax failure — nothing written, nothing to revert
+  if (onArmed) await onArmed();
+  const { alive, heartbeat, waitedMs } = await waitForAlive({ since, timeoutMs, path: hbPath });
+  if (!alive) {
+    revert(dir);
+    return { applied: true, alive: false, reverted: true, waitedMs, heartbeat: null };
+  }
+  return { applied: true, alive: true, reverted: false, waitedMs, heartbeat };
 }
