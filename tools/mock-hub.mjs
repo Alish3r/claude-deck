@@ -80,8 +80,14 @@ export function startHub({ port = 0, token, maxWaitMs = 25_000, log = false } = 
       resolve({
         server, port: p, url: `http://127.0.0.1:${p}`, events, enqueue,
         close: () => new Promise((r) => {
-          for (const { timer } of waiters.values()) clearTimeout(timer);
+          // end any in-flight long-polls so their sockets close, then force-drop the rest
+          for (const { timer, res } of waiters.values()) {
+            clearTimeout(timer);
+            try { res.writeHead(204); res.end(); } catch { /* already gone */ }
+          }
+          waiters.clear();
           server.close(() => r());
+          server.closeAllConnections?.(); // Node 18.2+: drop idle keep-alive sockets
         }),
       });
     });
