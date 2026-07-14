@@ -15,7 +15,7 @@ import { setEffort, readEffort } from './effort.js';
 async function withRig(fn) {
   const hub = await startHub({ port: 0 });
   const w = wireTwoChats(hub);
-  try { await fn(hub, w); } finally { w.close(); await hub.close(); }
+  try { await fn(hub, w); } finally { await w.close(); await hub.close(); }
 }
 
 test('cross-chat isolation: set_model on A changes A only, never B', async () => {

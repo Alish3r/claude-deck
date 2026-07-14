@@ -73,7 +73,7 @@ export function wireTwoChats(hub, { windowId = 'win1' } = {}) {
 
   return {
     hostBridge, transport, manager, cfA, cfB, bridgeA, bridgeB,
-    close: () => transport.stop(),
+    close: () => transport.stop(), // awaitable — drains the poll loop before returning
   };
 }
 
@@ -111,7 +111,7 @@ async function runMatrix() {
   const err = await waitFor(() => hub.events.find((e) => e.type === 'result' && e.ok === false && e.sessionId === 'B'));
   record('command to disposed chat -> error result', !!err, err ? err.error : 'missing');
 
-  w.close(); await hub.close();
+  await w.close(); await hub.close();
 
   const pass = rows.filter((r) => r.ok).length;
   console.log('\nM2 verification matrix');

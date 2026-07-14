@@ -69,7 +69,7 @@ test('end-to-end: hub command -> transport poll -> bridge routes to the panel', 
     hub.enqueue('wE2E', { op: 'set_model', value: 'claude-fable-5', sessionId: 'S1', id: 5 });
 
     const cmd = await got;
-    transport.stop();
+    await transport.stop();
     assert.equal(cmd.op, 'set_model');
     assert.deepEqual(posted, [{ type: 'claudedeck_cmd', op: 'set_model', value: 'claude-fable-5', id: 5 }]);
   } finally { await hub.close(); }
