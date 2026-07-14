@@ -12,6 +12,7 @@
 // extension are consequential — this repo's workflow gates them on human approval.
 
 import { locateExtensionDir, status, verify, apply, revert, guardedApply } from './patcher.js';
+import { readEffort, setEffort, defaultSettingsPath, EFFORT_LADDER } from './effort.js';
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -21,6 +22,7 @@ function parseArgs(argv) {
     else if (a === '--guard') args.guard = true;
     else if (a === '--timeout') args.timeout = Number(argv[++i]);
     else if (a === '--dir') args.dir = argv[++i];
+    else if (a === '--settings') args.settings = argv[++i];
     else if (a === '--help' || a === '-h') args.help = true;
     else args._.push(a);
   }
@@ -32,9 +34,11 @@ const USAGE = `claude-deck patch CLI
   node patch/cli.mjs verify  [--dir <ext-dir>]
   node patch/cli.mjs apply   [--dir <ext-dir>] [--dry-run] [--guard [--timeout <ms>]]
   node patch/cli.mjs revert  [--dir <ext-dir>]
+  node patch/cli.mjs effort  [get | <auto|low|medium|high|xhigh|max>] [--settings <path>]
 
   --guard   apply, then auto-revert unless the patched host emits a fresh
-            heartbeat within --timeout ms (default 10000) of you reloading.`;
+            heartbeat within --timeout ms (default 10000) of you reloading.
+  effort    ⊙GLOBAL — reads/writes ~/.claude/settings.json:effortLevel (closed-loop).`;
 
 function resolveDir(args) {
   const dir = args.dir || locateExtensionDir();
@@ -87,6 +91,20 @@ function main() {
       case 'revert': {
         const r = revert(resolveDir(args));
         console.log(r.reverted.length ? `reverted: ${r.reverted.join(', ')}` : 'nothing to revert (already pristine)');
+        break;
+      }
+      case 'effort': {
+        // ⊙GLOBAL effort control (writes ~/.claude/settings.json). Read is safe;
+        // a set against the real settings file is the consequential action.
+        const settings = args.settings || defaultSettingsPath();
+        const sub = args._[1];
+        if (!sub || sub === 'get') {
+          console.log(`effort (global): ${readEffort(settings)}   [${settings}]`);
+        } else {
+          if (!EFFORT_LADDER.includes(sub)) { console.error(`level must be one of: ${EFFORT_LADDER.join(' | ')}`); process.exit(1); }
+          const r = setEffort(settings, sub);
+          console.log(`effort set to '${r.level}' (settings=${r.settingsLevel ?? 'unset'}${r.ultracode ? ', ultracode' : ''}) in ${r.attempts} attempt(s)`);
+        }
         break;
       }
       default:
