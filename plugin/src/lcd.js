@@ -9,7 +9,7 @@
 //   icon      — glyph state (idle | spinner | ok | warn)
 //   indicator — 0..100 gauge (effort ladder position), or -1 to hide
 
-import { EFFORT_LADDER } from '../../patch/effort.js';
+import { EFFORT_LADDER } from '../../patch/effort-ladder.js';
 
 export const LCD_KEYS = { title: 'title', value: 'value', icon: 'icon', indicator: 'indicator' };
 
@@ -38,19 +38,18 @@ export function effortLabel(effort) {
   return String(effort);
 }
 
-// Effort position on the ladder as a 0..100 gauge value.
+// Effort position on the ladder as a 0..100 gauge value. 'auto'/unknown (not ladder
+// positions) sit at the gauge floor.
 export function effortPct(effort) {
-  const key = effort == null ? 'auto' : effort;
-  const i = EFFORT_LADDER.indexOf(key);
-  const idx = i < 0 ? 0 : i;
-  return Math.round((idx / (EFFORT_LADDER.length - 1)) * 100);
+  const i = EFFORT_LADDER.indexOf(effort);
+  return i < 0 ? 0 : Math.round((i / (EFFORT_LADDER.length - 1)) * 100);
 }
 
 // uiState: { phase: 'ok'|'browsing'|'applying'|'confirmed'|'error'|'reload-needed',
 //            browseValue?, marqueeOffset? }
 export function render(dial, targetState, ui = {}) {
   const off = ui.marqueeOffset ?? 0;
-  const chat = (ts) => marquee(ts.windowId ? `${ts.windowId} ▸ ${ts.sessionId ?? ''}`.trim() : (ts.sessionId ?? 'chat'), off);
+  const chat = (ts) => marquee(ts.summary || ts.sessionId || 'chat', off);
   const base = { title: '', value: '', icon: 'idle', indicator: -1, state: '' };
 
   // sentinels first
@@ -61,25 +60,36 @@ export function render(dial, targetState, ui = {}) {
   // ok — dial-specific
   if (ui.phase === 'reload-needed') return { ...base, title: chat(targetState), value: 'Reload needed', icon: 'warn', state: 'reload-needed' };
 
-  const iconFor = (p) => (p === 'applying' ? 'spinner' : p === 'confirmed' ? 'ok' : p === 'error' ? 'warn' : 'idle');
+  const iconFor = (p) => (p === 'applying' || p === 'compacting' ? 'spinner' : p === 'confirmed' ? 'ok' : p === 'error' ? 'warn' : 'idle');
+
+  // While browsing AND while the pick is being applied/confirmed, show the user's pick —
+  // flashing back to the old value mid-apply reads as "it didn't take".
+  const showPick = ui.browseValue != null && ['browsing', 'applying', 'confirmed'].includes(ui.phase);
 
   if (dial === 'effort') {
     // effort is ⊙GLOBAL — the marquee says so rather than a per-chat name
-    const value = ui.phase === 'browsing' ? effortLabel(ui.browseValue) : effortLabel(targetState.effort);
+    const value = showPick ? effortLabel(ui.browseValue) : effortLabel(targetState.effort);
     return {
       title: marquee('⊙ GLOBAL', off), value,
       icon: iconFor(ui.phase),
-      indicator: effortPct(ui.phase === 'browsing' ? ui.browseValue : targetState.effort),
+      indicator: effortPct(showPick ? ui.browseValue : targetState.effort),
       state: ui.phase === 'browsing' ? 'browsing' : (ui.phase || 'ok'),
     };
   }
-  // model dial
-  const value = ui.phase === 'browsing' ? modelShort({ model: ui.browseValue }) : modelShort(targetState);
+  // model dial — the Compacting screen is reserved for the dial's own compact command
+  // (ui.phase). A merely-busy chat (any generation sets the busy signal) keeps its model
+  // visible and gets the spinner as a working cue instead — busy ≠ compacting (#32).
+  if (ui.phase === 'compacting') {
+    return { ...base, title: chat(targetState), value: 'Compacting', icon: 'spinner', indicator: -1, state: 'compacting' };
+  }
+  const interacting = ['browsing', 'applying', 'confirmed', 'error'].includes(ui.phase);
+  const busyIdle = !!targetState.busy && !interacting;
+  const value = showPick ? modelShort({ model: ui.browseValue }) : modelShort(targetState);
   return {
     title: chat(targetState), value,
-    icon: iconFor(ui.phase),
+    icon: busyIdle ? 'spinner' : iconFor(ui.phase),
     indicator: -1,
-    state: ui.phase === 'browsing' ? 'browsing' : (ui.phase || 'ok'),
+    state: ui.phase === 'browsing' ? 'browsing' : busyIdle ? 'busy' : (ui.phase || 'ok'),
   };
 }
 

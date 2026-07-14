@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Claude Deck — device preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0c0e; --panel:#141518; --bezel:#1c1e22; --bezel-hi:#2a2d33;
+    --ink:#e8eef5; --muted:#7d8590; --faint:#4a4f57;
+    --lcd:#080b10; --lcd-ink:#eaf1f8; --lcd-dim:#93a0b2;
+    --clay:#d97757; --clay-hi:#f0916f; --hot:#ff6b4a;
+    --teal:#4fd6be; --amber:#e6b450; --ok:#5bd6a0; --warn:#e6864a;
+    --mono:"JetBrains Mono",ui-monospace,"Cascadia Code","SF Mono",monospace;
+    --sans:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%,#15171b,var(--bg) 60%);
+    color:var(--ink);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;padding:34px 20px 60px}
+  .wrap{max-width:900px;margin:0 auto}
+  .head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:26px}
+  .brand .k{color:var(--clay)}
+  .tag{color:var(--muted);font-size:13px;font-weight:500}
+  .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* just the two dial units: 2 screens above 2 dials — nothing else */
+  .device{margin:22px auto 0;max-width:460px;background:linear-gradient(180deg,#202226,#141518 62%,#0f1012);
+    border:1px solid #26282d;border-radius:22px;padding:16px 16px 18px;box-shadow:0 30px 80px -30px #000,inset 0 1px 0 #33363c}
+
+  /* LCD strip: 2 active segments share a chat banner spanning both */
+  .strip{border-radius:12px;overflow:hidden;border:1px solid #05070a;background:#05070a;
+    box-shadow:inset 0 2px 18px #000,0 0 0 3px #0c0e11;position:relative}
+  .chatbar{height:26px;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(180deg,#0c1119,#070a0f);border-bottom:1px solid #10141b;position:relative;overflow:hidden}
+  .chatbar .cn{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--lcd-ink);white-space:nowrap;letter-spacing:.01em}
+  .chatbar .cn .win{color:var(--lcd-dim)} .chatbar .cn .sep{color:var(--clay);margin:0 6px}
+  .chatbar::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 24px #000}
+  .segs{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#05070a}
+  .seg{position:relative;height:108px;overflow:hidden;background:var(--lcd)}
+  .seg .scan{position:absolute;inset:0;pointer-events:none;opacity:.05;z-index:6;
+    background:repeating-linear-gradient(180deg,#fff 0 1px,transparent 1px 3px)}
+  .seg .slabel{position:absolute;top:7px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;
+    font-weight:600;color:var(--lcd-dim);letter-spacing:.04em;z-index:4}
+
+  /* MODEL: atmosphere + horizontal carousel + thinking overlay */
+  #segModel .atmo{position:absolute;inset:0;transition:opacity .5s;z-index:0}
+  #segModel .emblem{position:absolute;right:-12px;bottom:-18px;width:96px;height:96px;opacity:.10;z-index:1}
+  #segModel .emblem svg{width:100%;height:100%}
+  .carousel{position:absolute;left:0;right:0;top:30px;height:56px;overflow:hidden;z-index:3}
+  .track{display:flex;height:100%;will-change:transform}
+  .card{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-weight:800;font-size:26px;color:#fff;text-shadow:0 2px 12px #000c;letter-spacing:-.01em}
+  .think{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    z-index:5;opacity:0;pointer-events:none;transition:opacity .25s;background:radial-gradient(circle at 50% 45%,#0b0f16ee,#070a0f 75%)}
+  .think.on{opacity:1}
+  .think .mark{font-size:22px;color:var(--clay);animation:breathe 1.25s ease-in-out infinite}
+  .think .word{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--lcd-ink)}
+  .think .word b{color:var(--clay-hi)}
+  @keyframes breathe{0%,100%{transform:scale(.82);opacity:.55;filter:drop-shadow(0 0 2px var(--clay))}50%{transform:scale(1.14);opacity:1;filter:drop-shadow(0 0 10px var(--clay))}}
+  /* fast confirm = a quick check pulse (no gerund-thinking unless it's actually slow) */
+  .mconfirm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none;font-size:32px;color:var(--ok);opacity:0;text-shadow:0 0 14px var(--ok)}
+  .mconfirm.go{animation:confpop .55s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes confpop{0%{opacity:0;transform:scale(.4)}28%{opacity:1;transform:scale(1.15)}68%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+  .mring{position:absolute;left:50%;top:50%;width:14px;height:14px;border-radius:50%;border:2px solid var(--clay);transform:translate(-50%,-50%) scale(0);pointer-events:none;z-index:5}
+
+  /* EFFORT: value + rising meter + flash seam */
+  #segEffort .eval{position:absolute;left:0;right:0;top:30px;height:44px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-weight:800;font-size:24px;color:var(--lcd-ink);z-index:3}
+  #segEffort .eval .u{position:absolute;transition:transform .3s cubic-bezier(.2,.9,.2,1),opacity .26s}
+  /* --- EFFORT METER: eq-staircase (design panel winner) + glow-dot + overshoot grafts --- */
+  .emeter{position:absolute;left:16px;right:14px;bottom:12px;height:30px;z-index:3}
+  .eqm-bars{position:absolute;inset:0;display:flex;align-items:flex-end;gap:6px}
+  .eqm-bars i{flex:1;min-width:0;max-width:16px;border-radius:3px 3px 1px 1px;transform-origin:bottom;
+    background:linear-gradient(to top,rgba(var(--c),.8),rgb(var(--c)));opacity:.22;filter:saturate(.5) brightness(.7);
+    transition:opacity .28s,filter .28s,box-shadow .28s,transform .32s cubic-bezier(.34,1.6,.5,1)}
+  .eqm-bars i.lit{opacity:1;filter:none;box-shadow:inset 0 1px 0 #ffffff4d,0 0 5px rgba(var(--c),.4)}
+  .eqm-bars i.cur{box-shadow:inset 0 1px 0 #ffffff85,0 0 11px rgba(var(--c),.8)}
+  .eqm-bars i.pop{transform:scaleY(1.18)}
+  .eqm-dot{position:absolute;left:0;bottom:0;width:6px;height:6px;border-radius:50%;background:#fff;opacity:0;
+    box-shadow:0 0 9px 1px rgba(var(--flash,255,107,74),.95);z-index:4;
+    transition:left .34s cubic-bezier(.2,.85,.25,1),bottom .34s cubic-bezier(.34,1.5,.5,1),opacity .3s,box-shadow .3s}
+  .eqm-veil{position:absolute;inset:-6px -8px;border-radius:8px;pointer-events:none;opacity:0;z-index:5;mix-blend-mode:screen;
+    background:linear-gradient(to top,rgba(var(--flash,255,107,74),.55),rgba(var(--flash,255,107,74),.06) 55%,transparent 78%)}
+
+  .dials{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:14px}
+  .dwrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .dial{width:60px;height:60px;border-radius:50%;position:relative;cursor:grab;
+    background:radial-gradient(circle at 50% 35%,#2b2e34,#15171a 70%);border:1px solid #303338;
+    box-shadow:0 6px 14px -6px #000,inset 0 2px 3px #3a3e45;transition:transform .12s ease-out}
+  .dial::after{content:"";position:absolute;left:50%;top:8px;width:3px;height:14px;border-radius:2px;background:var(--muted);transform:translateX(-50%)}
+  .dwrap.active .dial{border-color:var(--clay);box-shadow:0 6px 20px -6px var(--clay),inset 0 2px 3px #3a3e45}
+  .dwrap.active .dial::after{background:var(--clay-hi)}
+  .dwrap.off{opacity:.32}
+  .dname{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+  .dwrap.active .dname{color:var(--clay-hi)}
+
+  .panel{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:660px){.panel{grid-template-columns:1fr}}
+  .card2{border:1px solid var(--bezel);border-radius:15px;padding:15px 16px;background:linear-gradient(180deg,#131417,#0e0f11)}
+  .card2 h3{margin:0 0 11px;font-size:12px;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);font-weight:600}
+  .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  button.b{font-family:var(--sans);font-weight:600;font-size:13px;color:var(--ink);cursor:pointer;
+    background:linear-gradient(180deg,#212327,#171a1d);border:1px solid #2d3036;border-radius:10px;padding:8px 12px;transition:transform .1s,border-color .15s}
+  button.b:hover{border-color:var(--clay)} button.b:active{transform:translateY(1px) scale(.98)}
+  .knob{display:inline-flex;align-items:center;gap:2px}
+  .knob button{width:38px;height:34px;font-size:16px;padding:0}
+  .knob .name{min-width:104px;text-align:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--clay-hi)}
+  .hint{color:var(--faint);font-size:12px;margin-top:11px;line-height:1.5}
+  .foot{color:var(--faint);font-size:12px;margin-top:24px;text-align:center;line-height:1.6}
+  .foot code{color:var(--muted);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="brand">Claude<span class="k">Deck</span></div>
+    <div class="tag">Stream Deck + · live device preview</div>
+    <div class="live"><span class="dot"></span> bridge live</div>
+  </div>
+
+  <div class="device">
+    <div class="strip">
+      <div class="chatbar"><span class="cn" id="chatName"></span></div>
+      <div class="segs">
+        <div class="seg" id="segModel">
+          <div class="atmo" id="mAtmo"></div>
+          <div class="emblem" id="mEmblem"></div>
+          <div class="slabel">MODEL</div>
+          <div class="carousel"><div class="track" id="mTrack"></div></div>
+          <div class="think" id="mThink"><div class="mark" id="mMark">✳</div><div class="word" id="mWord"></div></div>
+          <div class="mconfirm" id="mConfirm">✓</div>
+          <div class="scan"></div>
+        </div>
+        <div class="seg" id="segEffort">
+          <div class="slabel">⊙ GLOBAL</div>
+          <div class="eval" id="eVal"></div>
+          <div class="emeter">
+            <div class="eqm-veil" id="eqmVeil"></div>
+            <div class="eqm-bars" id="eBars"></div>
+            <div class="eqm-dot" id="eqmDot"></div>
+          </div>
+          <div class="scan"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dials" id="dials"></div>
+  </div>
+
+  <div class="panel">
+    <div class="card2">
+      <h3>Dial 1 · Model <span style="color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0">— per chat</span></h3>
+      <div class="row">
+        <span class="knob"><button class="b" onclick="turnModel(-1)">‹</button><span class="name" id="mName"></span><button class="b" onclick="turnModel(1)">›</button></span>
+        <button class="b" onclick="pressModel()">Press · resync</button>
+      </div>
+      <div class="hint">Spin faster → the next model drives in faster. Stops ~0.5s → applies (Claude “thinks”), others untouched.</div>
+    </div>
+    <div class="card2">
+      <h3>Dial 2 · Effort <span style="color:var(--clay);font-weight:600;text-transform:none;letter-spacing:0">— ⊙ global</span></h3>
+      <div class="row">
+        <span class="knob"><button class="b" onclick="turnEffort(-1)">‹</button><span class="name" id="eName"></span><button class="b" onclick="turnEffort(1)">›</button></span>
+        <button class="b" onclick="pressEffort()">Press · thinking</button>
+      </div>
+      <div class="hint">Rising scale · flashes the level colour on change. Top = <b style="color:var(--clay-hi)">ultracode</b> (xhigh + ultracode).</div>
+    </div>
+    <div class="card2" style="grid-column:1/-1">
+      <h3>Focused chat</h3>
+      <div class="row" id="chatBtns"></div>
+    </div>
+  </div>
+
+  <div class="foot">Values from the real <code>plugin/src/lcd.js</code>. Model routes through the hub; effort writes settings.json locally.</div>
+</div>
+
+<script type="module">
+import { render, modelShort, effortLabel, effortPct } from '/plugin/src/lcd.js';
+import { EFFORT_LADDER } from '/patch/effort-ladder.js';
+
+const $=(id)=>document.getElementById(id);
+// per-model atmosphere + emblem
+const EMBLEM = {
+  brain:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M12 5a3 3 0 0 0-6 .5C4.5 6 4 7.2 4 8.5 4 10 5 11 5 11s-1 1-1 2.5S5.5 16 7 16.5A3 3 0 0 0 12 19M12 5a3 3 0 0 1 6 .5c1.5.5 2 1.7 2 3 0 1.5-1 2.5-1 2.5s1 1 1 2.5-1.5 2.5-3 3A3 3 0 0 1 12 19M12 5v14"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg>',
+  zap:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+};
+const CATALOG = [
+  {value:'claude-opus-4-8', label:'Opus 4.8', atmo:'radial-gradient(120% 90% at 30% 10%,#3a2a5a,#140f22 72%)', em:'brain'},
+  {value:'claude-sonnet-5', label:'Sonnet 5', atmo:'radial-gradient(120% 90% at 30% 10%,#1e3a5f,#0b1622 72%)', em:'spark'},
+  {value:'claude-haiku-4-5',label:'Haiku 4.5',atmo:'radial-gradient(120% 90% at 30% 10%,#164039,#0a1a18 72%)', em:'zap'},
+  {value:'claude-fable-5',  label:'Fable 5',  atmo:'radial-gradient(120% 90% at 30% 10%,#4a2f1e,#1d1109 72%)', em:'spark'},
+];
+const GERUNDS = ['Thinking','Deliberating','Puzzling','Pondering','Ruminating','Conjuring','Cogitating','Synthesizing'];
+const chats = [
+  {window:'code',  name:'auth-token-refresh-refactor', model:'claude-fable-5', effort:'xhigh'},
+  {window:'web',   name:'landing-page-redesign-v2',    model:'claude-opus-4-8',effort:'high'},
+  {window:'infra', name:'k8s-blue-green-migration',    model:'claude-sonnet-5',effort:'medium'},
+];
+let focus=0;
+const ui={model:{phase:'ok'},effort:{phase:'ok'}};
+const cur=()=>chats[focus];
+const catIdx=(v)=>Math.max(0,CATALOG.findIndex(m=>m.value===v));
+const targetState=()=>({kind:'ok',windowId:cur().window,sessionId:cur().name,model:cur().model,effort:cur().effort,catalog:CATALOG});
+
+// static build — only the two dials the plugin owns
+$('dials').innerHTML=['MODEL','EFFORT'].map((n,i)=>`<div class="dwrap active"><div class="dial" id="dl${i}"></div><div class="dname">${n}</div></div>`).join('');
+$('mTrack').innerHTML=CATALOG.map(m=>`<div class="card">${m.label}</div>`).join('');
+const ERAMP=[[79,214,190],[95,208,168],[230,180,80],[224,150,92],[217,119,87],[255,107,74]]; // teal->hot, per ladder step
+$('eBars').innerHTML=EFFORT_LADDER.map((_,i)=>`<i style="--i:${i};--c:${ERAMP[i].join(',')};height:${8+i*4}px"></i>`).join('');
+$('chatBtns').innerHTML=chats.map((c,i)=>`<button class="b" id="cb${i}" onclick="setFocus(${i})">${c.window} ▸ ${c.name}</button>`).join('');
+
+// ---- chat banner (spans both segments; full width) ----
+function paintChat(){ const c=cur(); $('chatName').innerHTML=`<span class="win">${c.window}</span><span class="sep">▸</span>${c.name}`; chats.forEach((_,i)=>$('cb'+i).style.borderColor=i===focus?'var(--clay)':''); }
+
+// ---- effort ramp colour ----
+function levelColor(pct){ const s=[[0,'#4fd6be'],[45,'#e6b450'],[80,'#d97757'],[100,'#ff6b4a']]; let a=s[0],b=s[s.length-1]; for(let i=0;i<s.length-1;i++){if(pct>=s[i][0]&&pct<=s[i+1][0]){a=s[i];b=s[i+1];break;}} return b[1]; }
+
+// ---- EFFORT METER: eq-staircase (design-panel winner) + glow-dot + overshoot grafts ----
+function paintEffortMeter(idx){
+  const bars=[...$('eBars').children];
+  bars.forEach((b,i)=>{ b.classList.toggle('lit',i<=idx); b.classList.toggle('cur',i===idx); });
+  const cur=bars[idx], dot=$('eqmDot');
+  if(cur){ const c=ERAMP[idx].join(',');
+    dot.style.left=(cur.offsetLeft+cur.offsetWidth/2-3)+'px';
+    dot.style.bottom=(cur.offsetHeight-3)+'px'; dot.style.opacity='1';
+    dot.style.background=`rgb(${c})`; dot.style.boxShadow=`0 0 9px 1px rgba(${c},.95)`; }
+}
+function flashEffort(idx){
+  const seg=$('segEffort'); seg.style.setProperty('--flash',ERAMP[idx].join(','));
+  $('eqmVeil').animate([{opacity:0},{opacity:.6},{opacity:0}],{duration:520,easing:'ease-out'});
+  const bars=[...$('eBars').children];
+  bars.forEach((b,i)=>{ if(i<=idx) b.animate([{filter:'brightness(2)'},{filter:'brightness(1)'}],{duration:420,delay:i*45}); });
+  const cur=bars[idx]; if(cur){ cur.classList.remove('pop'); void cur.offsetWidth; cur.classList.add('pop'); setTimeout(()=>cur.classList.remove('pop'),340); }
+}
+
+// ---- model carousel + atmosphere + thinking ----
+function paintAtmo(v){ const m=CATALOG[catIdx(v)]; $('mAtmo').style.background=m.atmo; $('mEmblem').innerHTML=EMBLEM[m.em]; }
+function slideTo(v,dur){ $('mTrack').style.transition=`transform ${dur}ms cubic-bezier(.2,.85,.25,1)`;
+  $('mTrack').style.transform=`translateX(-${catIdx(v)*100}%)`;
+  $('mTrack').animate([{filter:`blur(${Math.min(6,220/dur)}px)`},{filter:'blur(0)'}],{duration:dur}); paintAtmo(v); }
+let thinkTimer=null;
+function think(on){ const t=$('mThink'); t.classList.toggle('on',on);
+  if(on){ let i=0; const tick=()=>{ $('mWord').innerHTML=GERUNDS[i%GERUNDS.length]+'<b>…</b>'; i++; }; tick(); thinkTimer=setInterval(tick,650); }
+  else { clearInterval(thinkTimer); } }
+
+// ---- effort value ----
+function setEval(text,anim){ const el=$('eVal'); if(!anim){el.innerHTML=`<span class="u">${text}</span>`;return;} const old=el.querySelector('.u');
+  const nu=document.createElement('span');nu.className='u';nu.textContent=text;nu.style.transform='translateY(14px)';nu.style.opacity='0';el.appendChild(nu);
+  requestAnimationFrame(()=>{nu.style.transform='translateY(0)';nu.style.opacity='1';if(old){old.style.transform='translateY(-14px)';old.style.opacity='0';setTimeout(()=>old.remove(),300);}}); }
+function paintEffort(anim){ const eff=ui.effort.phase==='browsing'?ui.effort.browseValue:cur().effort;
+  setEval(effortLabel(eff),anim); const idx=EFFORT_LADDER.indexOf(eff==null?'auto':eff); paintEffortMeter(idx); }
+
+function spinDial(i,dir){ const d=$('dl'+i); const r=(d._r||0)+dir*30; d._r=r; d.style.transform=`rotate(${r}deg)`; }
+
+// ---- interactions ----
+let mTimer=null,eTimer=null,lastM=0;
+window.turnModel=(dir)=>{ spinDial(0,dir);
+  const now=performance.now(); const dt=now-lastM; lastM=now; const dur=Math.max(140,Math.min(460,dt<9999?dt*1.1:460));
+  const vals=CATALOG.map(m=>m.value); let i=vals.indexOf(ui.model.browseValue??cur().model); i=((i+dir)%vals.length+vals.length)%vals.length;
+  ui.model.browseValue=vals[i]; ui.model.phase='browsing'; slideTo(vals[i],Math.min(dur,320)); $('mName').textContent=modelShort({model:vals[i]});
+  clearTimeout(mTimer); mTimer=setTimeout(applyModel,620); };
+// A model switch is near-instant. Fast confirm -> just a check PULSE. The gerund
+// "thinking" overlay only appears if the confirm hasn't landed by THINK_DELAY (i.e. a
+// slow/hidden panel). CONFIRM_MS mocks the round-trip; the real plugin drives off the ack.
+const CONFIRM_MS=450, THINK_DELAY=650;
+function confirmPulse(){ const c=$('mConfirm'); c.classList.remove('go'); void c.offsetWidth; c.classList.add('go');
+  const seg=$('segModel'), r=document.createElement('div'); r.className='mring'; seg.appendChild(r);
+  r.animate([{transform:'translate(-50%,-50%) scale(0)',opacity:.9},{transform:'translate(-50%,-50%) scale(11)',opacity:0}],{duration:520,easing:'ease-out'}); setTimeout(()=>r.remove(),540); }
+function applyModel(){ ui.model.phase='applying';
+  const slow=setTimeout(()=>think(true),THINK_DELAY);   // shows ONLY if the confirm is slow
+  setTimeout(()=>{ clearTimeout(slow); think(false);
+    cur().model=ui.model.browseValue; ui.model.browseValue=null; ui.model.phase='ok';
+    slideTo(cur().model,200); refreshNames(); confirmPulse(); },CONFIRM_MS); }
+window.pressModel=()=>{ if(ui.model.phase!=='ok')return; const t=$('mThink'); t.classList.add('on'); think(true); setTimeout(()=>think(false),700); };
+
+window.turnEffort=(dir)=>{ spinDial(1,dir);
+  let i=EFFORT_LADDER.indexOf(ui.effort.browseValue??cur().effort??'auto'); i=Math.max(0,Math.min(EFFORT_LADDER.length-1,i+dir));
+  ui.effort.browseValue=EFFORT_LADDER[i]; ui.effort.phase='browsing'; paintEffort(true); flashEffort(i); $('eName').textContent=effortLabel(EFFORT_LADDER[i]);
+  clearTimeout(eTimer); eTimer=setTimeout(()=>{ cur().effort=ui.effort.browseValue; ui.effort.browseValue=null; ui.effort.phase='ok'; paintEffort(false); },560); };
+window.pressEffort=()=>{ flashEffort(EFFORT_LADDER.indexOf(cur().effort??'auto')); };
+
+window.setFocus=(i)=>{ focus=i; ui.model.phase='ok'; ui.effort.phase='ok'; ui.model.browseValue=ui.effort.browseValue=null;
+  $('chatName').animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'none'}],{duration:360});
+  paintChat(); slideTo(cur().model,300); paintEffort(true); refreshNames();
+  [$('segModel'),$('segEffort')].forEach(s=>s.animate([{filter:'brightness(1.7)'},{filter:'brightness(1)'}],{duration:420})); };
+function refreshNames(){ $('mName').textContent=modelShort({model:cur().model}); $('eName').textContent=effortLabel(cur().effort); }
+
+paintChat(); paintAtmo(cur().model); $('mTrack').style.transform=`translateX(-${catIdx(cur().model)*100}%)`;
+paintEffort(false); refreshNames();
+</script>
+</body>
+</html>

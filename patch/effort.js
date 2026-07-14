@@ -11,12 +11,12 @@
 // All fs access is injectable so the closed-loop retry/guard is unit-testable without
 // touching the real settings.json.
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
+import { EFFORT_LADDER } from './effort-ladder.js';
 
 export const SETTINGS_KEY = 'effortLevel';
-// Dial ladder, low -> high. 'auto' = unset; 'max' = xhigh + ultracode (webview).
-export const EFFORT_LADDER = ['auto', 'low', 'medium', 'high', 'xhigh', 'max'];
+export { EFFORT_LADDER };
 
 export function defaultSettingsPath() {
   const home = process.env.USERPROFILE || process.env.HOME;
@@ -25,22 +25,23 @@ export function defaultSettingsPath() {
 }
 
 // Map a dial position to what actually gets applied. `settingsLevel === undefined`
-// means "remove the key" (Auto). `ultracode` is the webview intent for 'max' — this
-// module owns only the settings half and returns the ultracode flag for the caller
-// (hub) to route to the webview bridge.
+// means "remove the key" (Auto). `ultracode` (the top ladder position) resolves to
+// xhigh + the ultracode flag — this module owns only the settings half and returns the
+// ultracode flag for the caller (hub) to route to the webview bridge.
 export function resolveEffort(level) {
   switch (level) {
     case 'auto': return { settingsLevel: undefined, ultracode: false };
     case 'low':
     case 'medium':
     case 'high':
-    case 'xhigh': return { settingsLevel: level, ultracode: false };
-    case 'max': return { settingsLevel: 'xhigh', ultracode: true };
+    case 'xhigh':
+    case 'max': return { settingsLevel: level, ultracode: false };
+    case 'ultracode': return { settingsLevel: 'xhigh', ultracode: true };
     default: throw new Error(`unknown effort level: ${level} (want one of ${EFFORT_LADDER.join('|')})`);
   }
 }
 
-const io = { readFile: readFileSync, writeFile: writeFileSync, exists: existsSync };
+const io = { readFile: readFileSync, writeFile: writeFileSync, exists: existsSync, rename: renameSync };
 
 // Current effort as a dial position: 'auto' when unset, else the stored value.
 export function readEffort(path = defaultSettingsPath(), { readFile = io.readFile, exists = io.exists } = {}) {
@@ -72,9 +73,19 @@ function applyEffort(raw, obj, settingsLevel) {
     delete rest[SETTINGS_KEY];
     return serialize(rest, raw);
   }
-  if (present && typeof obj[SETTINGS_KEY] === 'string') {
-    const re = new RegExp(`("${SETTINGS_KEY}"\\s*:\\s*)"[^"]*"`);
-    if (re.test(raw)) return raw.replace(re, `$1"${settingsLevel}"`);
+  // Targeted edit only for plain unescaped string values — a value containing a
+  // backslash-escape would let the naive quote-bounded regex cut the JSON mid-string
+  // and CORRUPT the user's global settings file.
+  if (present && typeof obj[SETTINGS_KEY] === 'string' && !/[\\"]/.test(obj[SETTINGS_KEY])) {
+    const re = new RegExp(`("${SETTINGS_KEY}"\\s*:\\s*)"[^"\\\\]*"`);
+    if (re.test(raw)) {
+      const next = raw.replace(re, `$1"${settingsLevel}"`);
+      // The regex replaces the FIRST textual "effortLevel" — if a nested object carries a
+      // same-named key that appears earlier in the file, the targeted edit would hit the
+      // wrong one and leave the authoritative top-level key unchanged. Confirm the edit
+      // actually landed on the top-level key before trusting it; else reserialize.
+      try { const parsed = JSON.parse(next); if (parsed[SETTINGS_KEY] === settingsLevel) return next; } catch { /* fall through to reserialize */ }
+    }
   }
   return serialize({ ...obj, [SETTINGS_KEY]: settingsLevel }, raw);
 }
@@ -84,14 +95,20 @@ function applyEffort(raw, obj, settingsLevel) {
 // attempts, changed }.
 export function setEffort(path, level, {
   retries = 3, backup = true,
-  readFile = io.readFile, writeFile = io.writeFile, exists = io.exists,
+  readFile = io.readFile, writeFile = io.writeFile, exists = io.exists, rename = io.rename,
 } = {}) {
   if (!path) throw new Error('setEffort requires a settings path');
   const { settingsLevel, ultracode } = resolveEffort(level);
 
+  // ATOMIC writes only: this is the user's global Claude settings — a kill mid-
+  // writeFileSync (truncate-then-write) would leave it corrupt. tmp+rename swaps whole.
+  const atomicWrite = (p, data) => { writeFile(p + '.cdtmp', data); rename(p + '.cdtmp', p); };
+
   if (backup && exists(path)) {
     const bak = path + '.cdbak-settings';
-    if (!exists(bak)) writeFile(bak, readFile(path, 'utf8'));
+    // best-effort convenience snapshot (never auto-restored) — a backup failure must not
+    // abort the closed-loop write, which is read-back-verified on its own
+    if (!exists(bak)) { try { atomicWrite(bak, readFile(path, 'utf8')); } catch { /* skip */ } }
   }
 
   let lastSeen;
@@ -100,9 +117,11 @@ export function setEffort(path, level, {
     const obj = JSON.parse(raw);
     const next = applyEffort(raw, obj, settingsLevel);
     const changed = next !== raw;
-    writeFile(path, next);
+    // A failed write is not fatal — the read-back below detects it and the loop retries.
+    try { atomicWrite(path, next); } catch { /* verified below */ }
 
-    const after = JSON.parse(readFile(path, 'utf8')); // <-- the crucial read-back
+    let after;
+    try { after = JSON.parse(readFile(path, 'utf8')); } catch { continue; } // <-- the crucial read-back
     lastSeen = SETTINGS_KEY in after ? after[SETTINGS_KEY] : undefined;
     const ok = settingsLevel === undefined ? !(SETTINGS_KEY in after) : lastSeen === settingsLevel;
     if (ok) return { level, settingsLevel: settingsLevel ?? null, ultracode, attempts: attempt, changed };

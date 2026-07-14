@@ -259,7 +259,9 @@ function writeBothAtomic(dir, patched) {
 export function revert(dir) {
   acquireLock(dir);
   try {
-    const restored = [];
+    // Phase 1 — validate EVERY file's backup before touching anything: a missing webview
+    // backup must not strand a half-reverted host (and must never cost host its backup).
+    const plan = [];
     for (const file of Object.keys(FILES)) {
       const dst = filePath(dir, file);
       const bak = dst + '.cdbak';
@@ -267,14 +269,18 @@ export function revert(dir) {
         if (!existsSync(dst) || !isPatched(readFileSync(dst, 'utf8'))) continue; // already pristine
         throw new Error(`no backup for ${FILES[file]} but file is patched; cannot revert`);
       }
-      const pristine = readFileSync(bak, 'utf8');
-      writeFileSync(dst, pristine);
-      if (sha256(readFileSync(dst, 'utf8')) !== sha256(pristine)) {
-        throw new Error(`revert verification failed for ${FILES[file]}`);
-      }
-      rmSync(bak, { force: true });
-      restored.push(file);
+      plan.push({ file, dst, bak, pristine: readFileSync(bak, 'utf8') });
     }
+    // Phase 2 — restore + verify all files, and only then drop the backups.
+    const restored = [];
+    for (const p of plan) {
+      writeFileSync(p.dst, p.pristine);
+      if (sha256(readFileSync(p.dst, 'utf8')) !== sha256(p.pristine)) {
+        throw new Error(`revert verification failed for ${FILES[p.file]}`);
+      }
+      restored.push(p.file);
+    }
+    for (const p of plan) rmSync(p.bak, { force: true });
     try { rmSync(join(dir, STATE_FILE), { force: true }); } catch { /* ignore */ }
     return { dir, reverted: restored };
   } finally {
@@ -295,12 +301,12 @@ export async function guardedApply(dir, {
   onArmed,               // optional: called after apply, before waiting (reload hook / test seam)
 } = {}) {
   const since = Date.now();          // capture BEFORE apply so only a post-arm heartbeat counts
-  apply(dir);                        // throws on anchor/syntax failure — nothing written, nothing to revert
+  const applied = apply(dir);        // throws on anchor/syntax failure — nothing written, nothing to revert
   if (onArmed) await onArmed();
   const { alive, heartbeat, waitedMs } = await waitForAlive({ since, timeoutMs, path: hbPath });
   if (!alive) {
     revert(dir);
-    return { applied: true, alive: false, reverted: true, waitedMs, heartbeat: null };
+    return { applied: true, version: applied?.version ?? null, alive: false, reverted: true, waitedMs, heartbeat: null };
   }
-  return { applied: true, alive: true, reverted: false, waitedMs, heartbeat };
+  return { applied: true, version: applied?.version ?? null, alive: true, reverted: false, waitedMs, heartbeat };
 }

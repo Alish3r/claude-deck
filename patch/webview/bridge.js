@@ -12,7 +12,7 @@
 //     the applied value)
 //
 // Effort LEVELS (low..xhigh, auto) are NOT driven here — they are ⊙GLOBAL and go through
-// settings.json (patch/effort.js, #6). Only the dial's "max" (ultracode) is a webview
+// settings.json (patch/effort.js, #6). Only the dial's top "ultracode" position is a webview
 // action. `effortLevel` is still reported in snapshots for display (not authoritative).
 //
 // Everything is injected (store, post, scheduling) so the logic is unit-testable with
@@ -41,7 +41,10 @@ export function createWebviewBridge({
   function snapshot() {
     if (!cur) return;
     const mi = val(cur.currentModelInfo) || {};
-    const catalog = (cur.claudeConfig && cur.claudeConfig.models) || [];
+    // claudeConfig is a SIGNAL on the live Cf (claudeConfig.value.models); accept a plain
+    // object too so older fakes/bundles keep working.
+    const cc = val(cur.claudeConfig) ?? cur.claudeConfig ?? {};
+    const catalog = cc.models || [];
     post({
       type: 'claudedeck_evt', kind: 'state', patchVersion,
       sessionId: val(cur.sessionId) ?? null,
@@ -51,7 +54,7 @@ export function createWebviewBridge({
       effort: val(cur.effortLevel) ?? null,          // display only — settings.json is authoritative
       ultracode: val(cur.ultracodeEnabled) || false,
       thinking: val(cur.thinkingLevelOverride) ?? null,
-      catalog: catalog.map((m) => ({ value: m.value, label: m.label })),
+      catalog: catalog.map((m) => ({ value: m.value, label: m.displayName ?? m.label ?? null })),
     });
   }
 
@@ -118,11 +121,16 @@ export function createWebviewBridge({
 
         case 'set_model': {
           if (cf.started && val(cf.started) === false) { accept('set_model', cmd.id, false, 'not started'); return { ok: false, reason: 'not started' }; }
-          const catalog = (cf.claudeConfig && cf.claudeConfig.models) || [];
-          if (catalog.length && !catalog.some((m) => m.value === cmd.value)) {
+          const cc2 = val(cf.claudeConfig) ?? cf.claudeConfig ?? {};
+          const catalog = cc2.models || [];
+          // The live setModel forwards the WHOLE descriptor to the backend (which can
+          // reject-and-rollback a malformed one) — drive it exactly as the picker does:
+          // with the full catalog entry, never a synthesized { value } shell.
+          const hit = catalog.find((m) => m && m.value === cmd.value);
+          if (catalog.length && !hit) {
             accept('set_model', cmd.id, false, 'not in catalog'); return { ok: false, reason: 'not in catalog' };
           }
-          try { cf.setModel({ value: cmd.value }); } catch (e) { accept('set_model', cmd.id, false, String(e && e.message || e)); return { ok: false, reason: 'threw' }; }
+          try { cf.setModel(hit ?? { value: cmd.value }); } catch (e) { accept('set_model', cmd.id, false, String(e && e.message || e)); return { ok: false, reason: 'threw' }; }
           accept('set_model', cmd.id, true);
           pending.push({ op: 'set_model', id: cmd.id, check: () => val(cf.modelSelection) === cmd.value });
           scheduleFlush();
@@ -139,7 +147,7 @@ export function createWebviewBridge({
           return { ok: true, next };
         }
 
-        case 'enable_ultracode': { // the dial's "max" effort position
+        case 'enable_ultracode': { // the dial's top "ultracode" effort position
           try { cf.enableUltracode(); } catch (e) { accept('enable_ultracode', cmd.id, false, String(e && e.message || e)); return { ok: false }; }
           accept('enable_ultracode', cmd.id, true);
           pending.push({ op: 'enable_ultracode', id: cmd.id, check: () => val(cf.ultracodeEnabled) === true });

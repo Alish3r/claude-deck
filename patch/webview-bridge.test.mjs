@@ -25,7 +25,8 @@ function makeCf(o = {}) {
     ultracodeEnabled: signal(o.ultracode || false),
     thinkingLevelOverride: signal(o.thinking || 'off'),
     started: signal(o.started !== undefined ? o.started : true),
-    claudeConfig: { models: o.catalog || [{ value: 'claude-fable-5', label: 'Fable' }, { value: 'claude-haiku-4-5', label: 'Haiku' }] },
+    // live-shaped: claudeConfig is a SIGNAL and entries carry displayName (not label)
+    claudeConfig: signal({ models: o.catalog || [{ value: 'claude-fable-5', displayName: 'Fable' }, { value: 'claude-haiku-4-5', displayName: 'Haiku' }] }),
     setModel(desc) { this.modelSelection.set(desc.value); this.currentModelInfo.set({ value: desc.value, label: desc.value }); return true; },
     setThinkingLevel(l) { this.thinkingLevelOverride.set(l); },
     enableUltracode() { this.ultracodeEnabled.set(true); },

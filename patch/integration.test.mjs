@@ -47,7 +47,7 @@ test('focus report reaches the hub with the active session', async () => {
   });
 });
 
-test('enable_ultracode (dial "max") drives the addressed chat', async () => {
+test('enable_ultracode (dial "ultracode" top) drives the addressed chat', async () => {
   await withRig(async (hub, w) => {
     hub.enqueue('win1', { op: 'enable_ultracode', sessionId: 'B', id: 3 });
     await waitFor(() => w.cfB.ultracodeEnabled.value === true);

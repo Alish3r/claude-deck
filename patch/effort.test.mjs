@@ -25,15 +25,16 @@ function memfs(initial) {
     readFile: (p) => { if (!store.has(p)) throw new Error('ENOENT'); return store.get(p); },
     writeFile: (p, d) => store.set(p, d),
     exists: (p) => store.has(p),
+    rename: (a, b) => { if (!store.has(a)) throw new Error('ENOENT'); store.set(b, store.get(a)); store.delete(a); },
   };
 }
 
 test('resolveEffort maps every ladder position', () => {
   assert.deepEqual(resolveEffort('auto'), { settingsLevel: undefined, ultracode: false });
-  for (const l of ['low', 'medium', 'high', 'xhigh']) {
+  for (const l of ['low', 'medium', 'high', 'xhigh', 'max']) {
     assert.deepEqual(resolveEffort(l), { settingsLevel: l, ultracode: false });
   }
-  assert.deepEqual(resolveEffort('max'), { settingsLevel: 'xhigh', ultracode: true });
+  assert.deepEqual(resolveEffort('ultracode'), { settingsLevel: 'xhigh', ultracode: true });
   assert.throws(() => resolveEffort('bogus'), /unknown effort level/);
 });
 
@@ -90,10 +91,10 @@ test('setEffort inserts the key when absent', () => {
   } finally { s.cleanup(); }
 });
 
-test("'max' writes xhigh to settings and flags ultracode for the webview", () => {
+test("'ultracode' writes xhigh to settings and flags ultracode for the webview", () => {
   const s = tmpSettings('{\n  "effortLevel": "low"\n}\n');
   try {
-    const r = setEffort(s.p, 'max');
+    const r = setEffort(s.p, 'ultracode');
     assert.equal(r.settingsLevel, 'xhigh');
     assert.equal(r.ultracode, true);
     assert.equal(JSON.parse(readFileSync(s.p, 'utf8')).effortLevel, 'xhigh');
@@ -135,6 +136,33 @@ test('closed-loop guard succeeds on a flaky writer that lands on a later attempt
   assert.equal(JSON.parse(fs.readFile('/s.json')).effortLevel, 'low');
 });
 
+test('setEffort never corrupts settings whose stored value contains escapes (falls back to reserialize)', () => {
+  const fs = memfs({ '/s.json': JSON.stringify({ effortLevel: 'weird\\"value', other: 1 }, null, 2) });
+  const r = setEffort('/s.json', 'high', { ...fs, backup: false });
+  const after = JSON.parse(fs.readFile('/s.json')); // parse throwing here IS the corruption regression
+  assert.equal(after.effortLevel, 'high');
+  assert.equal(after.other, 1, 'other keys preserved');
+  assert.equal(r.settingsLevel, 'high');
+});
+
+test('setEffort edits the TOP-LEVEL effortLevel, not a same-named nested key that appears first', () => {
+  // a nested object carries "effortLevel" textually BEFORE the authoritative top-level key
+  const fs = memfs({ '/s.json': JSON.stringify({ mcp: { effortLevel: 'low' }, effortLevel: 'high' }, null, 2) });
+  setEffort('/s.json', 'max', { ...fs, backup: false });
+  const after = JSON.parse(fs.readFile('/s.json'));
+  assert.equal(after.effortLevel, 'max', 'top-level key updated');
+  assert.equal(after.mcp.effortLevel, 'low', 'the nested same-named key is untouched');
+});
+
+test('setEffort writes are atomic: no .cdtmp remnants left behind', () => {
+  const fs = memfs({ '/s.json': '{\n  "effortLevel": "low"\n}\n' });
+  setEffort('/s.json', 'max', { ...fs, backup: false });
+  assert.equal([...fs.store.keys()].some((k) => k.includes('.cdtmp')), false);
+  assert.equal(JSON.parse(fs.readFile('/s.json')).effortLevel, 'max');
+});
+
 test('EFFORT_LADDER is the expected ordered ladder', () => {
-  assert.deepEqual(EFFORT_LADDER, ['auto', 'low', 'medium', 'high', 'xhigh', 'max']);
+  // no 'auto' rung: the Claude Code picker has no Auto entry (enum low..max) — auto is a
+  // display-only state for an absent settings key, not a dialable position (#31)
+  assert.deepEqual(EFFORT_LADDER, ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode']);
 });

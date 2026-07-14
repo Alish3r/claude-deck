@@ -72,7 +72,10 @@ export function createHub({
     const url = new URL(req.url, 'http://x');
 
     if (req.method === 'POST' && url.pathname === '/events') {
-      ingest(JSON.parse((await readBody(req)) || '{}'));
+      // malformed JSON must 400, not crash the plugin process
+      let evt;
+      try { evt = JSON.parse((await readBody(req)) || '{}'); } catch { res.writeHead(400); res.end(); return; }
+      ingest(evt);
       res.writeHead(200, { 'content-type': 'application/json' }); res.end('{}'); return;
     }
     if (req.method === 'GET' && url.pathname === '/commands') {

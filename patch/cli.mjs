@@ -34,7 +34,7 @@ const USAGE = `claude-deck patch CLI
   node patch/cli.mjs verify  [--dir <ext-dir>]
   node patch/cli.mjs apply   [--dir <ext-dir>] [--dry-run] [--guard [--timeout <ms>]]
   node patch/cli.mjs revert  [--dir <ext-dir>]
-  node patch/cli.mjs effort  [get | <auto|low|medium|high|xhigh|max>] [--settings <path>]
+  node patch/cli.mjs effort  [get | <auto|low|medium|high|xhigh|ultracode>] [--settings <path>]
 
   --guard   apply, then auto-revert unless the patched host emits a fresh
             heartbeat within --timeout ms (default 10000) of you reloading.
@@ -74,11 +74,14 @@ function main() {
       case 'apply': {
         const dir = resolveDir(args);
         if (args.guard) {
-          const timeoutMs = args.timeout ?? 10_000;
-          console.log(`applied — reload the VS Code window now; watching ${Math.round(timeoutMs / 1000)}s for the host heartbeat…`);
+          // a non-numeric --timeout parses to NaN; NaN defeats the guard (setTimeout(NaN)
+          // fires immediately OR the >= comparison never trips) — clamp to a sane default
+          const timeoutMs = Number.isFinite(args.timeout) && args.timeout > 0 ? args.timeout : 10_000;
+          // guardedApply applies internally — announce arming, not a done-deal apply
+          console.log(`arming guarded apply — reload the VS Code window once it says applied; watching ${Math.round(timeoutMs / 1000)}s for the host heartbeat…`);
           guardedApply(dir, { timeoutMs })
             .then((r) => {
-              if (r.alive) console.log(`host alive after ${r.waitedMs}ms — patch confirmed (v1)`);
+              if (r.alive) console.log(`host alive after ${r.waitedMs}ms — patch confirmed (v${r.version ?? '?'})`);
               else { console.error(`no heartbeat within ${timeoutMs}ms — AUTO-REVERTED to pristine`); process.exitCode = 1; }
             })
             .catch((e) => { console.error(`error: ${e.message}`); process.exitCode = 1; });

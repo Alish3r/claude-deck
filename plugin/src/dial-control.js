@@ -29,6 +29,9 @@ export function createDialControl({
     const value = pending; pending = null;
     const s = ++seq;
     inFlight.set(s, value);
+    // Un-acked entries (lost results) must not accumulate forever — anything this far
+    // behind the head is long superseded and its late ack would be 'stale' anyway.
+    for (const k of inFlight.keys()) if (k < s - 8) inFlight.delete(k);
     onApply({ seq: s, value });
     return s;
   }

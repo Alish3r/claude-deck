@@ -16,3 +16,9 @@ dist/
 # OS noise
 Thumbs.db
 .DS_Store
+
+# browser automation + plugin build
+.playwright-mcp/
+plugin/bin/
+*.sdplugin-stage/
+plugin/dist/
