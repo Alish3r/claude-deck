@@ -1,0 +1,38 @@
+{
+  "id": "claude-deck-dial",
+  "items": [
+    {
+      "key": "title",
+      "type": "text",
+      "rect": [0, 2, 200, 16],
+      "font": { "size": 12, "weight": 500 },
+      "alignment": "center",
+      "color": "#9aa0a6"
+    },
+    {
+      "key": "value",
+      "type": "text",
+      "rect": [0, 24, 200, 42],
+      "font": { "size": 26, "weight": 700 },
+      "alignment": "center",
+      "color": "#ffffff"
+    },
+    {
+      "key": "icon",
+      "type": "text",
+      "rect": [6, 72, 28, 24],
+      "font": { "size": 18, "weight": 700 },
+      "alignment": "center",
+      "color": "#3aa0ff"
+    },
+    {
+      "key": "indicator",
+      "type": "bar",
+      "rect": [40, 80, 154, 10],
+      "value": 0,
+      "bar_bg_c": "#2a2d31",
+      "bar_fill_c": "#3aa0ff",
+      "bar_border_c": "#2a2d31"
+    }
+  ]
+}

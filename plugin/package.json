@@ -1,0 +1,11 @@
+{
+  "name": "com.alisher.claude-deck",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Claude Deck — Stream Deck + plugin (model & effort dials).",
+  "main": "src/plugin.js",
+  "dependencies": {
+    "@elgato/streamdeck": "^2.1.0"
+  }
+}

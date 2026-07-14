@@ -1,0 +1,38 @@
+{
+  "SDKVersion": 3,
+  "Author": "alisher",
+  "Name": "Claude Deck",
+  "Version": "0.1.0.0",
+  "Description": "Control Claude Code model & effort from Stream Deck + dials, per focused chat.",
+  "Category": "Claude Deck",
+  "Icon": "imgs/plugin/marketplace",
+  "URL": "https://github.com/Alish3r/claude-deck",
+  "Nodejs": { "Version": "20" },
+  "CodePath": "src/plugin.js",
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }],
+  "Actions": [
+    {
+      "Name": "Model",
+      "UUID": "com.alisher.claude-deck.model",
+      "Icon": "imgs/actions/model/icon",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "layouts/dial.json",
+        "TriggerDescription": { "Rotate": "Browse model", "Push": "Resync" }
+      },
+      "States": [{ "Image": "imgs/actions/model/key", "TitleAlignment": "middle" }]
+    },
+    {
+      "Name": "Effort",
+      "UUID": "com.alisher.claude-deck.effort",
+      "Icon": "imgs/actions/effort/icon",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "layouts/dial.json",
+        "TriggerDescription": { "Rotate": "Set effort (⊙GLOBAL)", "Push": "Toggle thinking" }
+      },
+      "States": [{ "Image": "imgs/actions/effort/key", "TitleAlignment": "middle" }]
+    }
+  ]
+}
