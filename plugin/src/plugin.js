@@ -12,6 +12,9 @@ import { createRelayHub } from './relay-hub.js';
 import { createDialAction } from './action-logic.js';
 import { setEffort, defaultSettingsPath } from '../../patch/effort.js';
 import { renderModelSvg, renderEffortSvg } from './render-lcd.js';
+import { createCliHub } from './cli-hub.js';
+import { pickCompactRoute } from './compact-router.js';
+import { startForegroundPoller, foregroundInfo } from './foreground.js';
 
 // FALLBACK model catalog for Dial-1 browse. Since patch v3 the bridge snapshot carries
 // the LIVE catalog (claudeConfig.models — exact .value vocabulary incl. [1m] variants)
@@ -100,7 +103,28 @@ class ModelDial extends DialBase { constructor() { super('model', 'com.alisher.c
 class EffortDial extends DialBase { constructor() { super('effort', 'com.alisher.claude-deck.effort'); } }
 
 function main() {
-  hub = createRelayHub({ catalog: CATALOG });
+  const bridgeHub = createRelayHub({ catalog: CATALOG }); // synchronous object (relay-hub.js)
+  const cliHub = createCliHub();
+  startForegroundPoller();                                 // async cache — never blocks the press
+  // Facade: a model-dial PRESS (op:'compact') routes to the foreground CLI session, else the
+  // bridge, else a refusal. All other ops pass straight through to the bridge hub, unchanged.
+  hub = {
+    ...bridgeHub,
+    sendToTarget: (cmd) => {
+      if (cmd.op === 'compact') {
+        const bs = bridgeHub.targetState();
+        const route = pickCompactRoute({ fg: foregroundInfo(), cliMarkers: cliHub.liveMarkers(), bridgeActive: bs && bs.kind === 'ok' });
+        if (route.via === 'cli') return cliHub.sendCompact(route.id);
+        if (route.via === 'none') {
+          for (const c of controllers) if (c.dial === 'model') c.ctl.onResult({ id: null, ok: false, error: 'no-claude' });
+          return null;
+        }
+      }
+      return bridgeHub.sendToTarget(cmd);
+    },
+  };
+  // CLI compact results (ok:false busy/permission/unconfirmed) reach the model dial for LCD feedback.
+  cliHub.onResult((r) => { for (const c of controllers) if (c.dial === 'model') c.ctl.onResult({ id: null, ok: r.ok, error: r.reason }); });
   // route command results (acks) back to the matching dials
   const RESULT_DIAL = {
     set_model: 'model', compact: 'model',
