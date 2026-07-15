@@ -3,9 +3,9 @@
 Physical Stream Deck dials for the Claude Code VS Code extension. Spin a knob, change the model or reasoning effort of the chat you're looking at. Press a dial to `/compact`.
 
 <p align="center">
-  <img src="docs/assets/device-preview.png" alt="Claude Deck on-device preview: two LCDs (model + effort) over two dials, with the active chat name across the top" width="480">
+  <img src="docs/assets/device-preview.png" alt="Claude Deck on-device preview: two LCDs over two dials — model dial (active chat name + current model) on the left, global effort dial on the right" width="480">
   <br>
-  <sub>The two dial screens, rendered by the real plugin code — model carousel on the left, global effort on the right, active chat across the top.</sub>
+  <sub>The two dial screens, rendered by the real plugin code — model on the left (headed by the active chat name), global effort (⊙) on the right.</sub>
 </p>
 
 ## What it does
