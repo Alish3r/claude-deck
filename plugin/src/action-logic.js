@@ -21,6 +21,9 @@ export function createDialAction({
   setTimer, clearTimer,
 }) {
   let browseValue = null;
+  let held = null;      // {sessionId,value} — sticky display model after a CONFIRMED set. The bridge's
+  // model (currentMainLoopModel) lags a fresh setModel until a turn runs, so a phase:'ok' repaint
+  // would otherwise flash the LCD back to the old model. Hold the pick until the bridge catches up.
   let browseTarget = null; // {windowId,sessionId} captured at the FIRST tick of a browse:
   // the debounced apply must hit the chat the user was looking at when they started
   // turning, not whatever window grabbed focus by the time the debounce fires.
@@ -42,7 +45,18 @@ export function createDialAction({
   // Every paint carries the persistent marquee offset so interactions don't reset the
   // scrolling chat-name header.
   const paint = (ui0) => {
-    const ui = { marqueeOffset, ...ui0 };
+    // Sticky model hold: while the bridge's model still lags a just-applied set (same chat,
+    // modelActive not yet the held value), keep showing the held pick even on a phase:'ok'
+    // repaint. Release the hold the instant the bridge's modelActive matches (a turn ran).
+    let heldValue;
+    if (dial === 'model' && held) {
+      const s = state();
+      if (s.kind === 'ok' && s.sessionId === held.sessionId) {
+        if (s.modelActive === held.value) held = null;   // bridge caught up — stop holding
+        else heldValue = held.value;
+      }
+    }
+    const ui = { marqueeOffset, heldValue, ...ui0 };
     setFeedback({ ...toFeedback(render(dial, state(), ui)), _raw: { targetState: state(), ui } });
   };
 
@@ -61,6 +75,7 @@ export function createDialAction({
     browseValue = null; // next browse session re-anchors at live state, not this stale pick
     if (dial === 'model') {
       hub.sendToTarget({ op: 'set_model', value, id: nsId(seq), ...target });
+      held = { sessionId: target.sessionId ?? state().sessionId, value }; // hold until the bridge catches up
       paint({ phase: 'applying', browseValue: value }); // keep showing the user's pick, not the old model
       return;
     }
@@ -153,7 +168,9 @@ export function createDialAction({
         // mirrors to the chat picker — a mirror ok:false (no panel / hidden tab) must NOT
         // override a settings.json write that already succeeded. Ignore ack repaints here.
         if (dial === 'effort') return;
-        // model dial: an ok:false ack for the LATEST command is a FAILURE, not a confirmation
+        // model dial: an ok:false ack for the LATEST command is a FAILURE, not a confirmation.
+        // A rolled-back set never changed the model, so drop the hold — show the real model, not the pick.
+        if (result.ok === false) held = null;
         paint(result.ok === false
           ? { phase: 'error' }
           : { phase: 'confirmed', browseValue: result.requested });

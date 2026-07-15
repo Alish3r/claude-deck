@@ -108,7 +108,9 @@ export function renderModelSvg(targetState, ui = {}, chatHalf = '') {
   if (targetState.kind !== 'ok') return frame(sentinel(targetState, 'MODEL'));
   // browsing/applying/confirmed all show the user's pick (never flash back mid-apply)
   const showPick = ui.browseValue != null && ['browsing', 'applying', 'confirmed'].includes(ui.phase);
-  const value = showPick ? ui.browseValue : targetState.model;
+  // ui.heldValue: a just-set model the bridge hasn't caught up to yet (its currentMainLoopModel
+  // lags until a turn runs) — honor it on non-interacting repaints so the LCD never flashes back.
+  const value = showPick ? ui.browseValue : (ui.heldValue != null ? ui.heldValue : targetState.model);
   // 'default' (and aliases) hide the real model — surface it: big "Default", the concrete
   // resolved model in small type beneath. Resolution: the catalog row's resolved slug
   // (browse can preview any row), else the chat's own modelResolved.

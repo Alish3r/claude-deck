@@ -84,7 +84,10 @@ export function render(dial, targetState, ui = {}) {
   }
   const interacting = ['browsing', 'applying', 'confirmed', 'error'].includes(ui.phase);
   const busyIdle = !!targetState.busy && !interacting;
-  const value = showPick ? modelShort({ model: ui.browseValue }) : modelShort(targetState);
+  // ui.heldValue: a just-set model the bridge hasn't caught up to (its currentMainLoopModel lags a
+  // setModel until a turn runs) — hold it on phase:'ok' repaints so the LCD never flashes back.
+  const value = showPick ? modelShort({ model: ui.browseValue })
+    : (ui.heldValue != null ? modelShort({ model: ui.heldValue }) : modelShort(targetState));
   return {
     title: chat(targetState), value,
     icon: busyIdle ? 'spinner' : iconFor(ui.phase),

@@ -66,6 +66,33 @@ test('model dial: rotate browses catalog, debounced apply -> hub set_model with 
   assert.equal(sent[0].id, 'model:1', 'command carries a dial-namespaced seq id');
 });
 
+test('model dial: after a confirmed set, an idle repaint HOLDS the applied model until the bridge catches up (no flash-back to the old model)', () => {
+  // Regression: rotating set_model updates the picker but currentMainLoopModel (→ targetState.model)
+  // lags until a turn runs. The old code let a phase:'ok' repaint (tick/onUpdate) flash back to the
+  // stale targetState.model. Bridge still reports the OLD model (fable) via model + modelActive.
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', model: 'claude-fable-5', modelActive: 'claude-fable-5', catalog: CATALOG };
+  const { a, t, feedback } = rig({ dial: 'model', ts });
+  a.onRotate(2);                                    // fable -> opus (2 detents)
+  t.run();                                          // debounce -> set_model opus
+  a.onResult({ id: 'model:1', ok: true, requested: 'claude-opus-4-8' });
+  assert.match(feedback.at(-1).value, /Opus/, 'shows the applied model right after confirm');
+  a.onUpdate();                                     // background repaint, bridge STILL says fable
+  assert.match(feedback.at(-1).value, /Opus/, 'HOLDS opus — does NOT flash back to fable');
+  assert.doesNotMatch(feedback.at(-1).value, /Fable/, 'no stale old-model text');
+  ts.model = 'claude-opus-4-8'; ts.modelActive = 'claude-opus-4-8';  // a turn ran; bridge caught up
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /Opus/, 'still opus, now from the bridge (hold released)');
+});
+
+test('model dial: a failed (rolled-back) set does NOT stick — display returns to the real model', () => {
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', model: 'claude-fable-5', modelActive: 'claude-fable-5', catalog: CATALOG };
+  const { a, t, feedback } = rig({ dial: 'model', ts });
+  a.onRotate(2); t.run();
+  a.onResult({ id: 'model:1', ok: false, requested: 'claude-opus-4-8' }); // rollback / not-in-catalog
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /Fable/, 'no hold on a failed set — shows the real (unchanged) model');
+});
+
 test('effort dial: rotate writes ⊙GLOBAL settings locally AND mirrors to the picker', () => {
   const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', effort: 'low' };
   const { a, t, sent, efforts } = rig({ dial: 'effort', ts });
