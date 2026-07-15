@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Stream Deck + dials controlling Claude Code VS Code webview chats (per-chat model, global effort).",
   "scripts": {
+    "setup": "node setup.mjs",
     "test": "node --test",
     "matrix": "node tools/matrix.mjs",
     "hub": "node tools/mock-hub.mjs",
