@@ -169,7 +169,9 @@ export function renderModelSvg(targetState, ui = {}, chatHalf = '') {
 export function renderEffortSvg(targetState, ui = {}) {
   if (targetState.kind !== 'ok') return frame(sentinel(targetState, '⊙ GLOBAL'));
   const showPick = ui.browseValue != null && ['browsing', 'applying', 'confirmed'].includes(ui.phase);
-  const level = showPick ? ui.browseValue : (targetState.effort ?? 'auto');
+  // ui.heldValue: a just-applied level held over the mirror window (see action-logic) so a stray
+  // repaint doesn't flash the old effort before the chat's signal catches up.
+  const level = showPick ? ui.browseValue : (ui.heldValue != null ? ui.heldValue : (targetState.effort ?? 'auto'));
   // 'auto' (absent settings key) isn't a rung: label says Auto, no bars lit, no dot
   const idx = EFFORT_LADDER.indexOf(level);
   const n = EFFORT_LADDER.length;

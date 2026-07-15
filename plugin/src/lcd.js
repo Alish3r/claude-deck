@@ -67,12 +67,13 @@ export function render(dial, targetState, ui = {}) {
   const showPick = ui.browseValue != null && ['browsing', 'applying', 'confirmed'].includes(ui.phase);
 
   if (dial === 'effort') {
-    // effort is ⊙GLOBAL — the marquee says so rather than a per-chat name
-    const value = showPick ? effortLabel(ui.browseValue) : effortLabel(targetState.effort);
+    // effort is ⊙GLOBAL — the marquee says so rather than a per-chat name. ui.heldValue: a
+    // just-applied level held over the mirror window so a stray repaint can't flash the old one.
+    const eff = showPick ? ui.browseValue : (ui.heldValue != null ? ui.heldValue : targetState.effort);
     return {
-      title: marquee('⊙ GLOBAL', off), value,
+      title: marquee('⊙ GLOBAL', off), value: effortLabel(eff),
       icon: iconFor(ui.phase),
-      indicator: effortPct(showPick ? ui.browseValue : targetState.effort),
+      indicator: effortPct(eff),
       state: ui.phase === 'browsing' ? 'browsing' : (ui.phase || 'ok'),
     };
   }

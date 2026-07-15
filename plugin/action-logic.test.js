@@ -45,12 +45,13 @@ test('browseEffort clamps along the ladder (no wrap); auto/unknown anchors at lo
 function rig({ dial, ts }) {
   const t = fakeTimers();
   const sent = []; const feedback = []; const efforts = [];
+  const clock = { ms: 10000 }; // injected nowMs, advance via clock.ms for time-bounded holds
   const hub = { sendToTarget: (c) => sent.push(c), targetState: () => ts };
   const a = createDialAction({
     dial, hub, setFeedback: (f) => feedback.push(f), setEffort: (l) => efforts.push(l),
-    setTimer: t.setTimer, clearTimer: t.clearTimer,
+    setTimer: t.setTimer, clearTimer: t.clearTimer, nowMs: () => clock.ms,
   });
-  return { a, t, sent, feedback, efforts };
+  return { a, t, sent, feedback, efforts, clock };
 }
 
 test('model dial: rotate browses catalog, debounced apply -> hub set_model with id=seq', () => {
@@ -113,6 +114,30 @@ test('effort dial: rotate writes ⊙GLOBAL settings locally AND mirrors to the p
   assert.deepEqual(efforts, ['medium'], 'setEffort called with the level (settings.json stays the authority)');
   assert.equal(sent[0].op, 'set_effort', 'display mirror: the focused chat picker follows the dial');
   assert.equal(sent[0].value, 'medium');
+});
+
+test('effort dial: after a change, an idle repaint HOLDS the applied level over the mirror window', () => {
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', effort: 'low', effortGlobal: 'low' };
+  const { a, t, feedback } = rig({ dial: 'effort', ts });
+  a.onRotate(2); t.run();                                  // low -> high, applied; bridge STILL low
+  assert.match(feedback.at(-1).value, /high/, 'confirmed shows the applied level');
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /high/, 'HOLDS high — does not flash back to low');
+  assert.doesNotMatch(feedback.at(-1).value, /low/, 'no stale low');
+  ts.effort = 'high';                                      // chat signal catches up (mirror propagated)
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /high/, 'still high, now from the bridge (hold released)');
+});
+
+test('effort hold is time-bounded — expires so a failed mirror can never wedge it', () => {
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', effort: 'low', effortGlobal: 'low' };
+  const { a, t, feedback, clock } = rig({ dial: 'effort', ts });
+  a.onRotate(2); t.run();                                  // held high, until = now + 2500
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /high/, 'held before expiry');
+  clock.ms += 3000;                                        // past EFFORT_HOLD_MS; mirror never propagated
+  a.onUpdate();
+  assert.match(feedback.at(-1).value, /low/, 'hold expired — falls back to the bridge signal, never wedged');
 });
 
 test('effort dial: low is the floor — auto is not dialable (the picker has no Auto)', () => {

@@ -19,11 +19,15 @@ export function createDialAction({
   setEffort,            // (level) => void   — required for the effort dial (⊙GLOBAL)
   debounceMs = 500,
   setTimer, clearTimer,
+  nowMs = () => Date.now(),
 }) {
   let browseValue = null;
-  let held = null;      // {sessionId,value} — sticky display model after a CONFIRMED set. The bridge's
-  // model (currentMainLoopModel) lags a fresh setModel until a turn runs, so a phase:'ok' repaint
-  // would otherwise flash the LCD back to the old model. Hold the pick until the bridge catches up.
+  let held = null;      // {sessionId,value,until?} — sticky display value after a CONFIRMED set, so a
+  // phase:'ok' repaint doesn't flash the LCD back to a bridge signal that hasn't caught up yet.
+  // MODEL: no `until` — the bridge's modelActive (currentMainLoopModel) only catches up when a turn
+  // runs, and holding the applied model until then is correct. EFFORT: `until` time-bounds the hold
+  // (~mirror window) so it can't stick if the set_effort mirror fails on a hidden tab.
+  const EFFORT_HOLD_MS = 2500;
   let browseTarget = null; // {windowId,sessionId} captured at the FIRST tick of a browse:
   // the debounced apply must hit the chat the user was looking at when they started
   // turning, not whatever window grabbed focus by the time the debounce fires.
@@ -45,19 +49,18 @@ export function createDialAction({
   // Every paint carries the persistent marquee offset so interactions don't reset the
   // scrolling chat-name header.
   const paint = (ui0) => {
-    // Sticky model hold: while the bridge's model still lags a just-applied set (same chat,
-    // modelActive not yet the held value), keep showing the held pick even on a phase:'ok'
-    // repaint. Release the hold the instant the bridge's modelActive matches (a turn ran).
-    // MODEL-ONLY BY DESIGN: the effort dial writes the SAME signal the bridge reads back
-    // (set_effort → setEffortLevel → cf.effortLevel → targetState.effort), so it has no
-    // persistent lag like the model's currentMainLoopModel. Its only exposure is a narrow,
-    // self-correcting race (an unrelated onUpdate repaint in the sub-second mirror window),
-    // not worth a guard that would stick if the mirror fails on a hidden tab. (codex-verified)
+    // Sticky hold: after a CONFIRMED set, keep showing the applied value on a phase:'ok' repaint
+    // until the bridge signal it maps to catches up — so an unrelated repaint can't flash the LCD
+    // back to a stale value mid-apply. MODEL catch-up = modelActive (currentMainLoopModel, updates
+    // on the next turn; no time bound). EFFORT catch-up = the focused chat's effort signal, plus a
+    // time bound so a hidden-tab mirror failure can't wedge the hold on forever.
     let heldValue;
-    if (dial === 'model' && held) {
+    if (held) {
       const s = state();
       if (s.kind === 'ok' && s.sessionId === held.sessionId) {
-        if (s.modelActive === held.value) held = null;   // bridge caught up — stop holding
+        const live = dial === 'model' ? s.modelActive : s.effort;
+        const expired = held.until != null && nowMs() >= held.until;
+        if (live === held.value || expired) held = null;   // bridge caught up, or the hold timed out
         else heldValue = held.value;
       }
     }
@@ -99,6 +102,9 @@ export function createDialAction({
         // the picker mirrors the key removal); the display can never contradict the file.
         hub.sendToTarget({ op: 'set_effort', value: value === 'auto' ? undefined : value, id: nsId(seq), ...target });
       }
+      // Hold the applied level over the mirror window so a stray repaint can't flash the old
+      // effort. Time-bounded: releases when the chat's signal catches up, or after EFFORT_HOLD_MS.
+      held = { sessionId: target.sessionId ?? state().sessionId, value, until: nowMs() + EFFORT_HOLD_MS };
       paint({ phase: 'confirmed', browseValue: value });
     } catch {
       paint({ phase: 'error' });
