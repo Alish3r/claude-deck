@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { createIdleDetector } from './src/idle-detector.js';
+
+const FIX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
 // TIME-based busy debounce — controllable clock (no clear-screen assumption).
 function clk() { const c = { t: 1000 }; return { d: createIdleDetector({ quiescenceMs: 400, now: () => c.t }), c }; }
@@ -43,3 +48,25 @@ test('streaming text with no footer/prompt/permission => unknown (refuse-safe)',
   d.feed('some streaming text with no prompt box and no footer');
   assert.equal(d.state(), 'unknown');
 });
+
+// ── Fail-loud fixture tests (Task 0) ────────────────────────────────────────────────────────────
+// Real `claude` 2.x TUI frames captured by tools/capture-fixtures.mjs. These are the ground truth
+// the classifier must satisfy; a missing fixture fails LOUDLY (ENOENT) so the suite can't pass
+// without them. The tricky case is `reply-then-idle`: a just-completed turn whose "✻ Churned for 3s"
+// summary contains a lone spinner glyph — it must read idle, NOT busy.
+const FIXTURES = {
+  'idle': 'idle',                       // startup idle — prompt buried under a Fable-5 promo + usage banner
+  'reply-then-idle': 'idle',            // turn just finished — lone "✻" + "✨ ready" must be idle
+  'busy': 'busy',                       // "· Roosting…" gerund working line
+  'busy-sample-1500': 'busy',           // "✽ Musing…" mid-turn frame
+  'busy-sample-2500': 'busy',
+  'busy-sample-3500': 'busy',
+  'trust-prompt': 'awaiting-permission', // "❯ 1. Yes, I trust this folder" onboarding gate
+};
+for (const [name, expected] of Object.entries(FIXTURES)) {
+  test(`fixture ${name}.txt classifies as ${expected}`, () => {
+    const raw = readFileSync(join(FIX, `${name}.txt`), 'utf8');  // ENOENT here = fixture missing → fail loud
+    const d = createIdleDetector();                              // real wall clock: stamp+classify are one sync call
+    assert.equal(d.feed(raw), expected, `${name}.txt should classify as ${expected}`);
+  });
+}

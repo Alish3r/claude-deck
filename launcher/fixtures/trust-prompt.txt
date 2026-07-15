@@ -1,0 +1,18 @@
+[2J[m[H]0;C:\WINDOWS\SYSTEM32\cmd.exe[?25h]0;claude[?2004h[?1004h[?2031h[?25l[38;2;255;193;7m
+────────────────────────────────────────────────────────────────────────────────────────────────────[m
+ [1m[38;2;255;193;7mAccessing[m [1m[38;2;255;193;7mworkspace:[m[K
+[K
+ [1m[97mC:\Users\Professional\Documents\CODE\claude-deck\launcher[m[K
+[K
+ Quick safety check: Is this a project you created or one you trust? (Like your own code, a[K
+ well-known open source project, or work from your team). If not, take a moment to review what's in 
+ this folder first.[K
+[K
+ Claude Code'll be able to read, edit, and execute files here.[K
+[K
+ [38;2;153;153;153mSecurity[m [38;2;153;153;153mguide[m[K
+[K
+ [38;2;177;185;249m❯[m [38;2;153;153;153m1.[m [38;2;177;185;249mYes,[m [38;2;177;185;249mI[m [38;2;177;185;249mtrust[m [38;2;177;185;249mthis[m [38;2;177;185;249mfolder[m[K
+   [38;2;153;153;153m2.[m No, exit[K
+[K
+ [38;2;153;153;153mEnter[m [38;2;153;153;153mto[m [38;2;153;153;153mconfirm[m [38;2;153;153;153m·[m [38;2;153;153;153mEsc[m [38;2;153;153;153mto[m [38;2;153;153;153mcancel[m[K[67C[>0q

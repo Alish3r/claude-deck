@@ -1,0 +1,72 @@
+[m https://support.claude.com/en/articles/15424964-claude-fable-5-promotional-access[K
+[K
+[K
+[K
+[K
+[K
+[K
+[27X[38;2;255;193;7m[27CYou've used 82% of your weekly limit · resets Jul 18, 11pm (Asia/Nicosia)[m [38;2;136;136;136m
+─────────────────────────────────────────────────────────────────────────────────────────────────────[m
+❯ [K[38;2;136;136;136m
+─────────────────────────────────────────────────────────────────────────────────────────────────────[m
+  [38;2;153;153;153m🧠 Sonnet 5  │  ⏱ 0m[m[K
+  [38;2;153;153;153m✨ ready[m[K
+  [38;2;153;153;153m⏸ manual mode on[m[K[26;3H[?25h[25l[38;2;215;119;87m[H▝▜[48;2;0;0;0m█████[49m▛▘[m  [38;2;153;153;153mSonnet 5 with medium effort · Claude Max[K[38;2;215;119;87m
+  ▘▘ ▝▝  [m  [38;2;153;153;153m~\Documents\CODE\claude-deck[K[m
+[K
+ [38;2;255;193;7m⚠[m [38;2;255;193;7m2 MCP servers need authentication[38;2;153;153;153m · run /mcp[K[m
+[K
+ [38;2;215;119;87m▎[m [38;2;215;119;87mExtended through July 19[K[m
+ [38;2;215;119;87m▎[m We're extending Claude Fable 5 access on all paid plans, as well as keeping Claude Code’s weekly 
+ [38;2;215;119;87m▎[m rate limits 50% higher, through July 19.[K
+ [38;2;215;119;87m▎[K[m
+ [38;2;215;119;87m▎[m As before, you can use up to half of your weekly usage limit on Fable 5. After that, you can keep
+[K
+ [38;2;215;119;87m▎[m using Fable 5 with usage credits, or switch to another model to keep working within your remainin
+g [38;2;215;119;87m▎[m limits.[K
+ [38;2;215;119;87m▎[K[m
+ [38;2;215;119;87m▎[m More details here:[K
+ [38;2;215;119;87m▎[m https://support.claude.com/en/articles/15424964-claude-fable-5-promotional-access[K
+[K
+[K
+[K
+[K
+[K
+[K
+[27X[38;2;255;193;7m[27CYou've used 82% of your weekly limit · resets Jul 18, 11pm (Asia/Nicosia)[m
+[K[38;2;136;136;136m
+────────────────────────────────────────────────────────────────────────────────────────────────────
+─[m❯ [K[38;2;136;136;136m
+────────────────────────────────────────────────────────────────────────────────────────────────────
+─[m  [38;2;153;153;153m🧠 Sonnet 5  │  ⏱ 0m[K[m
+  [38;2;153;153;153m✨ ready[K[m
+  [38;2;153;153;153m⏸ manual mode on[K[28;4H[?25h[m[?25l[H[K[38;2;215;119;87m
+ ▐[48;2;0;0;0m▛███▜[49m▌[m   [1m[97mClaude Code[m [38;2;153;153;153mv2.1.209[m[K[38;2;215;119;87m
+▝▜[48;2;0;0;0m█████[49m▛▘[m  [38;2;153;153;153mSonnet 5 with medium effort · Claude Max[m[K[38;2;215;119;87m
+  ▘▘ ▝▝  [m  [38;2;153;153;153m~\Documents\CODE\claude-deck[m[K
+[K
+ [38;2;255;193;7m⚠[m [38;2;255;193;7m2 MCP servers need authentication[38;2;153;153;153m · run /mcp[m[K
+[K
+ [38;2;215;119;87m▎[m [38;2;215;119;87mExtended through July 19[m[K
+ [38;2;215;119;87m▎[m We're extending Claude Fable 5 access on all paid plans, as well as keeping Claude Code’s weekly 
+ [38;2;215;119;87m▎[m rate limits 50% higher, through July 19.[K
+ [38;2;215;119;87m▎[m[K
+ [38;2;215;119;87m▎[m As before, you can use up to half of your weekly usage limit on Fable 5. After that, you can keep
+ [38;2;215;119;87m▎[m using Fable 5 with usage credits, or switch to another model to keep working within your[K
+ [38;2;215;119;87m▎[m remaining limits.[K
+ [38;2;215;119;87m▎[m[K
+ [38;2;215;119;87m▎[m More details here:[K
+ [38;2;215;119;87m▎[m https://support.claude.com/en/articles/15424964-claude-fable-5-promotional-access[K
+[K
+[K
+[K
+[K
+[K
+[K
+[27X[38;2;255;193;7m[27CYou've used 82% of your weekly limit · resets Jul 18, 11pm (Asia/Nicosia)[38;2;136;136;136m
+────────────────────────────────────────────────────────────────────────────────────────────────────[m
+❯ [K[38;2;136;136;136m
+────────────────────────────────────────────────────────────────────────────────────────────────────[m
+  [38;2;153;153;153m🧠 Sonnet 5  │  ⏱ 0m[m[K
+  [38;2;153;153;153m✨ ready[m[K
+  [38;2;153;153;153m⏸ manual mode on[m[K[26;3H[?25h
