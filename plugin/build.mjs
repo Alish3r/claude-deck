@@ -99,6 +99,9 @@ async function main() {
   };
   copyPkg('sharp');
   copyPkg('@img/sharp-win32-x64'); // the win32 native binary IS required on this platform
+  // macOS is EXPERIMENTAL and unshipped: a Mac build would also need the darwin sharp binary
+  // (@img/sharp-darwin-arm64 / -x64) copied here, plus mac added to manifest.OS. Untested — the
+  // packaged bundle is Windows-only today. See README § Maturity.
   if (missing.length) throw new Error(`bin/node_modules is missing required packages: ${missing.join(', ')} — run npm install in plugin/`);
   console.log(`bin/node_modules: ${[...copied].sort().join(', ')}`);
 

@@ -29,7 +29,7 @@ The press action is configurable per dial in Stream Deck settings: model dial pr
 - **Closed-loop, never trust the ack.** Claude Code's own API can return `ok: true` for a change that didn't actually persist. Classic. Every write here is verified by reading the value back from disk afterward, the LCD shows what's really there, not what a promise claimed.
 - **Not limited to VS Code.** The dials need the VS Code extension, that's where model and effort actually live. But the Compact press also works standalone in any terminal running the `claude` CLI (iTerm2, Terminal.app, Windows Terminal, cmd, PowerShell), through a patch-free PTY launcher. No VS Code, no patched extension, nothing to install into the editor.
 - **Refuses instead of guessing.** Compact never fires on a running turn or a permission prompt, never sends OS-level keystrokes, and never touches a background chat it can't positively identify. If it can't tell which session you mean, it does nothing rather than compact the wrong one.
-- **Windows and macOS.** Cross-platform in principle (Node + a VS Code extension patch), only exercised on Windows so far, see [Requirements](#requirements).
+- **Windows today, macOS experimental.** The dial logic and the launcher are cross-platform in principle (plain Node + a VS Code extension patch), but the prebuilt plugin ships a Windows-only native image library, so as-is it runs on Windows. macOS needs a rebuild and hasn't been tested, see [Maturity](#maturity-honest-version).
 
 ## Read this first
 
@@ -44,12 +44,13 @@ Modifying the extension may go against Anthropic's terms. You're responsible for
 - A Stream Deck **with dials** (Stream Deck +). Knob-only decks can't drive it.
 - VS Code with the Claude Code extension.
 - Node 20+.
-- Windows or macOS. Only exercised on Windows so far.
+- Windows. macOS is experimental (see Maturity below), Linux untested.
 
 ## Maturity: honest version
 
 - **Model + effort dials in VS Code:** work, verified on real hardware.
 - **The Compact press** (both the VS Code bridge and the terminal launcher): newer, experimental. Don't expect it to be as solid yet.
+- **macOS / Linux:** experimental. The dial logic and launcher are cross-platform, but the prebuilt plugin bundles a Windows-only native image binary (`sharp` win32-x64), so the packaged bundle only loads on Windows. Running it on a Mac means rebuilding with the darwin binary, which I haven't done or tested yet. Contributions welcome.
 
 I'd rather tell you that up front than have you find out the hard way.
 
