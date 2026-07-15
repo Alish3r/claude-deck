@@ -102,25 +102,16 @@ Never OS-level keystrokes. It only fires when Claude is idle. Press during a run
 ```sh
 git clone https://github.com/Alish3r/claude-deck
 cd claude-deck
-npm install
+npm run setup
 ```
 
-Apply the patch:
+That's the whole install: it finds your Claude Code extension, installs the plugin's
+dependencies, applies the patch, and builds + side-loads the Stream Deck plugin — skipping
+any step that's already done, so it's safe to re-run. It prints a clear error and stops if
+something's missing (e.g. the Claude Code extension isn't installed) instead of failing
+partway through.
 
-```sh
-node patch/cli.mjs apply
-node patch/cli.mjs status   # should show the __CLAUDE_DECK_v1__ markers
-```
-
-Build the plugin:
-
-```sh
-cd plugin
-npm install
-node build.mjs             # bundles + copies into the Stream Deck plugins dir
-```
-
-Then:
+Two steps are GUI-only and can't be scripted:
 
 - In VS Code: **Developer: Reload Window**.
 - In the Stream Deck app: add the **Model** and **Effort** dial actions.
@@ -130,6 +121,13 @@ If the plugin doesn't show up:
 ```sh
 npx @elgato/cli restart com.alisher.claude-deck
 ```
+
+### Installing via Claude Code (or another coding agent)
+
+Paste this repo's URL into a Claude Code chat and ask it to set it up — `npm run setup` is
+the only command it needs to run. The script is non-interactive, idempotent, and exits with
+a specific error message if a prerequisite is missing, so an agent can act on the output
+without guessing.
 
 ## Using it outside VS Code
 
