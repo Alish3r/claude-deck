@@ -21,6 +21,16 @@ That's the whole idea. No menus, no typing `/model` every time.
 
 The press action is configurable in the Stream Deck settings for each dial: the model dial press defaults to `/compact` (or resync), the effort dial press defaults to toggle-thinking (or resync).
 
+## Features
+
+- **Model is per-chat.** Claude Code's model setting lives per-conversation, not globally, so the dial follows it: turn the knob and only the chat you're looking at changes model. Switch to a different tab and the dial re-reads and shows *that* chat's model — it never carries the old tab's value over.
+- **Effort is honestly global.** Reasoning effort isn't stored per-chat in Claude Code, it's one value in `~/.claude/settings.json`. Rather than fake a per-chat effort dial, this one is upfront about being ⊙GLOBAL — the LCD is labelled accordingly, so you're never misled into thinking you set effort for just one chat.
+- **Multiple VS Code windows and chat tabs.** You can have several VS Code windows open, each with several chat tabs. The dial targets the real active tab (`mgr.activeSessionId`), not a "focused" flag — that one lags and can point at a tab you already clicked away from. Turning the dial always writes to the chat you're actually looking at, in whichever window that is.
+- **Closed-loop, never trust the ack.** Claude Code's own API can return `ok: true` for a change that didn't actually persist. Every write here is verified by reading the value back from disk afterward — the LCD shows what's really there, not what a promise claimed.
+- **Not limited to VS Code.** The dials themselves need the VS Code extension — that's where model and effort live. But the Compact press also works standalone in any terminal running the `claude` CLI (iTerm2, Terminal.app, Windows Terminal, cmd, PowerShell), through a patch-free PTY launcher — no VS Code, no patched extension, nothing to install into the editor.
+- **Refuses instead of guessing.** Compact never fires on a running turn or a permission prompt, never sends OS-level keystrokes, and never touches a background chat it can't positively identify — if it can't tell which session you mean, it does nothing rather than compact the wrong one.
+- **Windows and macOS.** Cross-platform in principle (Node + a VS Code extension patch); only exercised on Windows so far — see [Requirements](#requirements).
+
 ## Read this first
 
 Unofficial. Not affiliated with or endorsed by Anthropic or Elgato.
