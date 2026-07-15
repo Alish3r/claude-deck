@@ -178,6 +178,7 @@ Other editors (Cursor and the rest): the dials won't work, they need Anthropic's
 These may drift with versions. As of what I've looked at:
 
 - **Model is per-channel**, so a per-chat model dial is actually possible.
+- **There's also a global default `model`** in `~/.claude/settings.json`, but editing it only affects sessions started *after* the edit, it can't hot-swap the model in a chat that's already running. That's the whole reason this patches the extension instead of just writing the file: the patch calls the live `setModel` on the running conversation, per-chat, right now. The config-file route is real but coarse (global, next-session-only).
 - **Effort is global** (`~/.claude/settings.json` → `effortLevel`). So the effort dial is honestly global, not faking per-chat. Didn't want to pretend otherwise.
 - The effort enum is `low | medium | high | xhigh`. `max` maps to `enableUltracode()`.
 - The real running model comes from `currentMainLoopModel`. The picker's `modelSelection` lags after `/model`, don't read that one.
@@ -230,6 +231,12 @@ Standing on Elgato's SDK and a few good libraries.
 - [`sharp`](https://github.com/lovell/sharp) — rasterizes the dial SVGs into the PNGs the LCD touch strip displays.
 - [`esbuild`](https://github.com/evanw/esbuild) — bundles the plugin into one self-contained file (no `node_modules` shipped except the native image binary).
 - [`@lydell/node-pty`](https://github.com/lydell/node-pty) — PTY wrapping for the terminal launcher (Windows ConPTY), a maintained fork of Microsoft's [`node-pty`](https://github.com/microsoft/node-pty).
+
+## Related projects
+
+Not the only take on physical control for Claude Code, and the mechanism differences are the interesting part:
+
+- [**batuakin/claude-model-shifter**](https://github.com/batuakin/claude-model-shifter) — a Windows app with an H-pattern car gear shifter (engine sounds and all) that switches models by editing `~/.claude/settings.json`. That's the safe, no-patch route, but as its own README notes, editing the file only affects the *next* session, it can't change the model inside a running chat. Claude Deck goes the other way: it patches the extension so it can drive the live conversation per-chat, at the cost of being reverse-engineered and version-specific. Different trade, same itch.
 
 ## License
 
