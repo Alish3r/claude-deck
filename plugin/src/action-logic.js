@@ -112,9 +112,13 @@ export function createDialAction({
       // hub state made every tick recompute from the same start, collapsing a five-detent
       // turn into a single step.
       if (dial === 'model') {
-        // anchor on the catalog VALUE the running model maps to (s.model is a resolved
-        // slug like "claude-opus-4-8[1m]" that isn't itself a catalog .value)
-        const cur = browseValue != null ? browseValue : (s.modelActive || s.model);
+        // Anchor at the value currently DISPLAYED: mid-browse pick > held pick > the bridge's live
+        // model. The held pick matters because the bridge's modelActive lags a fresh set, so
+        // anchoring at it made the first click after a change re-land on the model already shown
+        // ("one click does nothing"). s.model is a resolved slug (not a catalog .value); modelActive
+        // is the catalog value the running model maps to.
+        const anchor = held && s.sessionId === held.sessionId ? held.value : (s.modelActive || s.model);
+        const cur = browseValue != null ? browseValue : anchor;
         browseValue = browseModel(s.catalog || [], cur, ticks);
       } else {
         // anchor on the AUTHORITATIVE global effort, not the per-chat display signal —

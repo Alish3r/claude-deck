@@ -66,6 +66,17 @@ test('model dial: rotate browses catalog, debounced apply -> hub set_model with 
   assert.equal(sent[0].id, 'model:1', 'command carries a dial-namespaced seq id');
 });
 
+test('model dial: after a change, the NEXT single click continues from the held pick (not the stale bridge model)', () => {
+  // Regression from the held-model fix: the bridge's modelActive lags a fresh set, so anchoring
+  // rotation at it made the first click after a change re-land on the model already shown
+  // ("one click does nothing; need a 2-3 click spin"). Anchor at the held (displayed) model instead.
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', model: 'claude-fable-5', modelActive: 'claude-fable-5', catalog: CATALOG };
+  const { a, t } = rig({ dial: 'model', ts });
+  a.onRotate(1); t.run();                       // fable -> haiku, applied; held=haiku; bridge STILL fable
+  a.onRotate(1);                                // a slow single click later
+  assert.equal(a.browseValue, 'claude-opus-4-8', 'continues haiku -> opus, not re-landing on haiku');
+});
+
 test('model dial: after a confirmed set, an idle repaint HOLDS the applied model until the bridge catches up (no flash-back to the old model)', () => {
   // Regression: rotating set_model updates the picker but currentMainLoopModel (→ targetState.model)
   // lags until a turn runs. The old code let a phase:'ok' repaint (tick/onUpdate) flash back to the

@@ -139,6 +139,14 @@ export function renderModelSvg(targetState, ui = {}, chatHalf = '') {
   const sub = isDefault && resolved ? `${resolvedShort(resolved)} · recommended` : '';
   const context = !isDefault ? (CONTEXT[familyOf(resolved || value)] || '') : '';
   const glyph = ui.phase === 'applying' ? 'spinner' : ui.phase === 'confirmed' ? 'ok' : ui.phase === 'error' ? 'warn' : busyIdle ? 'spinner' : null;
+  // Position indicator: one dot per catalog model, current highlighted — "where am I in the
+  // rotation", the model-dial analog of the effort meter's bars.
+  const cat = targetState.catalog || [];
+  const mIdx = cat.findIndex((m) => m && m.value === value);
+  const dots = cat.length > 1 && cat.length <= 9 && mIdx >= 0 ? (() => {
+    const gap = 9, total = (cat.length - 1) * gap, sx = W / 2 - total / 2, dy = H - 7;
+    return cat.map((_, i) => `<circle cx="${sx + i * gap}" cy="${dy}" r="${i === mIdx ? 2.8 : 2}" fill="${i === mIdx ? CLAY_HI : '#39404a'}"/>`).join('');
+  })() : '';
   const flash = ui.flash ? `<rect width="${W}" height="${H}" fill="#fff" opacity="0.22"/>` : '';
   return frame(`
     <defs><radialGradient id="atmo" cx="30%" cy="15%" r="85%">
@@ -152,6 +160,7 @@ export function renderModelSvg(targetState, ui = {}, chatHalf = '') {
     ${sub ? fitText(68, sub, DIM, 11) : ''}
     ${context ? fitText(68, context) : ''}
     ${chip(16, H - 12, glyph, glyph === 'warn' ? WARN : glyph === 'ok' ? OK : CLAY, busyIdle ? ((ui.spin || 0) % 24) * 15 : null, busyIdle)}
+    ${dots}
     ${flash}
   `);
 }
