@@ -48,6 +48,11 @@ export function createDialAction({
     // Sticky model hold: while the bridge's model still lags a just-applied set (same chat,
     // modelActive not yet the held value), keep showing the held pick even on a phase:'ok'
     // repaint. Release the hold the instant the bridge's modelActive matches (a turn ran).
+    // MODEL-ONLY BY DESIGN: the effort dial writes the SAME signal the bridge reads back
+    // (set_effort → setEffortLevel → cf.effortLevel → targetState.effort), so it has no
+    // persistent lag like the model's currentMainLoopModel. Its only exposure is a narrow,
+    // self-correcting race (an unrelated onUpdate repaint in the sub-second mirror window),
+    // not worth a guard that would stick if the mirror fails on a hidden tab. (codex-verified)
     let heldValue;
     if (dial === 'model' && held) {
       const s = state();

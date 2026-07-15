@@ -36,6 +36,28 @@ const ICONS = [
   { base: 'imgs/actions/effort/key', svg: svg(GAUGE), size: 72 },
 ];
 
+// Every file a loadable bundle MUST contain. A partial install (interrupted cpSync, a locked
+// dir, a missed icon) ships a green build that shows "?" on the dials — exactly the failure
+// this guards against. Verified on BOTH the stage and the installed copy; missing anything
+// throws instead of silently shipping. Icons come from ICONS so the list can't drift.
+const EXPECT = [
+  'manifest.json',
+  'bin/bootstrap.js', 'bin/plugin.js',
+  'bin/node_modules/sharp/package.json',
+  'bin/node_modules/@img/sharp-win32-x64/package.json',
+  'layouts/dial.json',
+  'ui/press.html',
+  ...ICONS.flatMap(({ base }) => [`${base}.png`, `${base}@2x.png`]),
+];
+function verifyBundle(root, label) {
+  const missing = EXPECT.filter((p) => !existsSync(join(root, ...p.split('/'))));
+  if (missing.length) {
+    throw new Error(`${label} is INCOMPLETE — ${missing.length} file(s) missing:\n  ${missing.join('\n  ')}\n`
+      + `A partial bundle shows "?" on the dials. Stop the plugin first (npx @elgato/cli stop ${UUID}) and re-run the build.`);
+  }
+  console.log(`${label}: ${EXPECT.length} expected files present ✓`);
+}
+
 async function main() {
   // Best-effort clean; if the SD app holds the linked dir (Windows lock), just overwrite.
   try { rmSync(STAGE, { recursive: true, force: true }); } catch { /* locked — overwrite in place */ }
@@ -101,6 +123,7 @@ async function main() {
     await sharp(buf, { density: 384 }).resize(size * 2, size * 2).png().toFile(join(STAGE, `${base}@2x.png`));
   }
 
+  verifyBundle(STAGE, 'staged bundle');
   console.log(`staged: ${STAGE}`);
 
   if (install) {
@@ -113,6 +136,7 @@ async function main() {
     let cleanSwap = true;
     try { rmSync(dest, { recursive: true, force: true }); } catch { cleanSwap = false; }
     cpSync(STAGE, dest, { recursive: true });
+    verifyBundle(dest, 'installed bundle'); // catch a partial copy (locked/interrupted) before it shows "?" on the dials
     console.log(`installed: ${dest}${cleanSwap ? '' : ' (dir was locked — overwrote in place; stale files may remain)'}`);
     console.log('Restart the plugin to load it: npx @elgato/cli restart com.alisher.claude-deck');
   }
