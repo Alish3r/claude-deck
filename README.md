@@ -181,9 +181,7 @@ The launcher tests run against real captured Claude TUI frames, so the idle dete
 More detail lives in:
 
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) — the deep dive
-- [docs/STATUS.md](docs/STATUS.md)
-- [docs/PLAN.md](docs/PLAN.md)
-- [docs/BRIDGE-PROTOCOL.md](docs/BRIDGE-PROTOCOL.md)
+- [docs/STREAMDECK-SDK.md](docs/STREAMDECK-SDK.md) — Stream Deck SDK notes I verified while building this
 
 Contributions welcome. Especially two things:
 
