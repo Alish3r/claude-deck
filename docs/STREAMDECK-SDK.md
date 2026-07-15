@@ -1,6 +1,6 @@
 # Stream Deck SDK — verified facts for M3 (the plugin)
 
-_Verified 2026-07-14 against the live Elgato docs (links at bottom). Supersedes the second-hand SDK line in `PLAN.md` where they differ._
+_Verified 2026-07-14 against the live Elgato docs (links at bottom)._
 
 The plugin is a **real, native Stream Deck plugin**: it installs into the Stream Deck app, its two encoder actions appear in the actions list, and you drag them onto the Stream Deck + dials. For personal use it's **side-loaded in developer mode** (an unpacked `<uuid>.sdPlugin` bundle linked into the plugins folder via the `streamdeck` CLI) — no Marketplace submission and no code signing required. (Marketplace/signing only matter for public distribution, which is explicitly out of scope.)
 
@@ -25,9 +25,9 @@ The plugin is a **real, native Stream Deck plugin**: it installs into the Stream
 - **Stream Deck + device identity:** the plan says `device.type === 7`. Not confirmed on the dials/manifest pages — verify against the WebSocket `deviceDidConnect` device-type table before relying on it.
 - Exact `dialRotate` payload field names (`ticks`, `pressed`) — the `@elgato/streamdeck` typed event exposes them; confirm names when wiring `onDialRotate`.
 
-## Where this lands in our design (per PLAN.md M3)
+## Where this lands in the design
 
-Two `SingletonAction` encoder actions (`model-dial`, `effort-dial`) in `plugin/`, a 200×100 custom `dial.json` layout (marquee + value + glyph + gauge), `setFeedback` on state change, the 127.0.0.1 WS hub for focus arbitration + host routing. Dial 2 renders the ⊙GLOBAL effort (see `BRIDGE-PROTOCOL.md`).
+Two `SingletonAction` encoder actions (`model-dial`, `effort-dial`) in `plugin/`, a 200×100 custom `dial.json` layout (marquee + value + glyph + gauge), `setFeedback` on state change, the 127.0.0.1 WS hub for focus arbitration + host routing. Dial 2 renders the ⊙GLOBAL effort (see [docs/HOW-IT-WORKS.md](HOW-IT-WORKS.md)).
 
 ## Sources
 
