@@ -1,6 +1,8 @@
 # Claude Deck
 
-Physical Stream Deck dials for the Claude Code VS Code extension. Spin a knob, change the model or the reasoning effort on whatever chat you're looking at. Press the dial, it runs `/compact`. That's it, that's the pitch.
+Physical dials for the Claude Code VS Code extension, driven from an **Elgato Stream Deck +**. Spin a knob, change the model or the reasoning effort on whatever chat you're looking at. Press the dial, it runs `/compact`. That's it, that's the pitch.
+
+Built specifically for the **[Elgato Stream Deck +](https://www.elgato.com/us/en/p/stream-deck-plus-black)** — the model with the four rotary dials and the LCD touch strip. Two of those dials become your Claude model and effort knobs; their screens are segments of the touch strip.
 
 <p align="center">
   <img src="docs/assets/banner.png" alt="Claude Deck banner: real on-device render of the two dial LCDs (model on the left headed by the active chat name, global effort on the right) next to a feature list, model per chat, effort honestly global, compact on press, closed-loop writes, works beyond VS Code" width="800">
@@ -19,7 +21,17 @@ Press either dial to send `/compact` and shrink the conversation. The little scr
 
 That's the whole idea. No menus, no typing `/model` fifteen times a day.
 
-The press action is configurable per dial in Stream Deck settings: model dial press defaults to `/compact` (or resync), effort dial press defaults to toggle-thinking (or resync).
+The press action is configurable per dial in the Stream Deck app's settings for each action: model dial press defaults to `/compact` (or resync), effort dial press defaults to toggle-thinking (or resync).
+
+## The hardware
+
+This is a native **Elgato Stream Deck +** plugin. The Stream Deck + is the one Elgato deck with **four rotary encoders** and a **200×100-per-segment LCD touch strip** above them — that combination is the whole reason this project exists, because the dials give you an analog knob for a setting that otherwise takes a menu click.
+
+- Each Claude Deck action drops onto **one dial**: add **Model** to one, **Effort** to another. Turning is the encoder rotation; pressing is the encoder push.
+- The little screens you see are that dial's slice of the touch strip, rendered live by the plugin (real pixels, 200×100 each).
+- It will **not** run on the button-only Stream Decks (Mini / MK.2 / XL / Neo) — no dials, nothing to turn. You need the **+**.
+
+It installs as a normal Stream Deck plugin via the Elgato `@elgato/cli` (side-loaded in developer mode — no Marketplace submission). Not affiliated with Elgato; "Stream Deck" is Elgato's trademark, used here only to say what hardware this targets.
 
 ## Features
 
@@ -41,7 +53,8 @@ Modifying the extension may go against Anthropic's terms. You're responsible for
 
 ## Requirements
 
-- A Stream Deck **with dials** (Stream Deck +). Knob-only decks can't drive it.
+- An **Elgato Stream Deck +** (the model with the four rotary dials and the LCD touch strip). The button-only decks — Mini, MK.2, XL, Neo — have no dials and can't drive it.
+- The **Stream Deck app** (Elgato's software, 6.5+) to load the plugin.
 - VS Code with the Claude Code extension.
 - Node 20+.
 - Windows. macOS is experimental (see Maturity below), Linux untested.
