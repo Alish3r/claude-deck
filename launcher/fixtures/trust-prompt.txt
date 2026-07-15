@@ -2,7 +2,7 @@
 ────────────────────────────────────────────────────────────────────────────────────────────────────[m
  [1m[38;2;255;193;7mAccessing[m [1m[38;2;255;193;7mworkspace:[m[K
 [K
- [1m[97mC:\Users\Professional\Documents\CODE\claude-deck\launcher[m[K
+ [1m[97mC:\Users\user\Documents\CODE\claude-deck\launcher[m[K
 [K
  Quick safety check: Is this a project you created or one you trust? (Like your own code, a[K
  well-known open source project, or work from your team). If not, take a moment to review what's in 
