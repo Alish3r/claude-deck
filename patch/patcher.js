@@ -52,6 +52,16 @@ function compareExtNames(a, b) {
   return a1 - b1 || a2 - b2 || a3 - b3 || a.localeCompare(b);
 }
 
+// The extension's own version, parsed from its directory name
+// (`anthropic.claude-code-1.2.3-win32-x64` -> "1.2.3"). null if unparseable. Recorded at
+// apply time so `status`/setup can tell when the live extension has moved off the version
+// the patch was built + verified against (the anchors are version-specific).
+export function extensionVersion(dir) {
+  const base = String(dir ?? '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+  const m = base.match(/(\d+\.\d+\.\d+)/);
+  return m ? m[1] : null;
+}
+
 // --- file helpers -----------------------------------------------------------
 
 function filePath(dir, file) { return join(dir, FILES[file]); }
@@ -121,12 +131,18 @@ export function status(dir) {
   const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
   const anyPatched = Object.values(files).some((f) => f.patched);
   const allPatched = Object.values(files).every((f) => f.patched);
+  const extVersion = extensionVersion(dir);            // live extension version (from the dir name)
   return {
     dir,
     patched: allPatched,
     partial: anyPatched && !allPatched,
     files,
     version: state?.version ?? null,
+    extVersion,                                        // what's installed now
+    patchedExtVersion: state?.extVersion ?? null,      // what the patch was applied against
+    // the live extension moved off the version the patch was verified against — the anchors
+    // may no longer fit; callers (status output, setup) should re-check before trusting it.
+    extChanged: !!(state?.extVersion) && state.extVersion !== extVersion,
     state,
     locked: isLocked(dir),
   };
@@ -211,6 +227,7 @@ export function apply(dir, { dryRun = false } = {}) {
 
     writeFileSync(join(dir, STATE_FILE), JSON.stringify({
       version: PATCH_VERSION,
+      extVersion: extensionVersion(dir),   // the claude-code version these anchors were verified against
       patchedAt: new Date().toISOString(),
       hostHash: sha256(patched.host),
       webviewHash: sha256(patched.webview),

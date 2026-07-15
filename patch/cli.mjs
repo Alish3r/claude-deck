@@ -56,7 +56,13 @@ function main() {
       case 'status': {
         const s = status(resolveDir(args));
         const tag = s.patched ? 'PATCHED' : s.partial ? 'PARTIAL(!)' : 'pristine';
-        console.log(`state: ${tag}${s.version ? ` (v${s.version})` : ''}${s.locked ? ' [locked]' : ''}`);
+        console.log(`state: ${tag}${s.version ? ` (v${s.version})` : ''}${s.extVersion ? ` · claude-code ${s.extVersion}` : ''}${s.locked ? ' [locked]' : ''}`);
+        if (s.extChanged) {
+          console.log(`  ⚠ patched against claude-code ${s.patchedExtVersion}, live is ${s.extVersion} — the anchors are version-specific.`);
+          console.log(`    run \`node patch/cli.mjs apply --dry-run\` to check they still fit, or \`revert\` first.`);
+        } else if (s.patched) {
+          console.log(`  note: a VS Code extension update replaces this folder and drops the patch — re-run setup / \`apply\` to re-apply.`);
+        }
         for (const [file, f] of Object.entries(s.files)) {
           console.log(`  ${file.padEnd(8)} ${f.exists ? (f.patched ? 'patched' : 'pristine') : 'MISSING'}${f.backup ? ' +bak' : ''}`);
         }

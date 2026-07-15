@@ -12,7 +12,7 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
-  apply, revert, status, verify, locateExtensionDir, patchOne,
+  apply, revert, status, verify, locateExtensionDir, patchOne, extensionVersion,
 } from './patcher.js';
 import { MARK } from './anchors.js';
 
@@ -31,6 +31,47 @@ function stage() {
   return dir;
 }
 const cleanup = (dir) => rmSync(dir, { recursive: true, force: true });
+
+// Same as stage() but under a realistically-named `anthropic.claude-code-<version>-...` dir,
+// so extensionVersion() has a semver to parse. Returns { dir, base } — cleanup(base).
+function stageVersioned(version) {
+  const base = mkdtempSync(join(tmpdir(), 'cd-test-'));
+  const dir = join(base, `anthropic.claude-code-${version}-win32-x64`);
+  mkdirSync(join(dir, 'webview'), { recursive: true });
+  cpSync(join(FIXTURES, 'extension.js'), join(dir, 'extension.js'));
+  cpSync(join(FIXTURES, 'webview', 'index.js'), join(dir, 'webview', 'index.js'));
+  return { dir, base };
+}
+
+test('extensionVersion parses the semver from the extension dir name', () => {
+  assert.equal(extensionVersion('/x/anthropic.claude-code-1.2.3-win32-x64'), '1.2.3');
+  assert.equal(extensionVersion('C:\\Users\\me\\.vscode\\extensions\\anthropic.claude-code-2.0.10-darwin-arm64'), '2.0.10');
+  assert.equal(extensionVersion('anthropic.claude-code-0.9.0'), '0.9.0');
+  assert.equal(extensionVersion('/x/no-version-here'), null);
+  assert.equal(extensionVersion(''), null);
+  assert.equal(extensionVersion(null), null);
+});
+
+test('apply records the extension version; status flags when the live extension has moved off it', () => {
+  const { dir, base } = stageVersioned('1.2.3');
+  try {
+    apply(dir);
+    // fresh apply: recorded version == live version, no drift flagged
+    const s1 = status(dir);
+    assert.equal(s1.extVersion, '1.2.3', 'live extension version surfaced');
+    assert.equal(s1.patchedExtVersion, '1.2.3', 'recorded what it was patched against');
+    assert.equal(s1.extChanged, false);
+    // simulate a VS Code update that left this folder but bumped the recorded-vs-live delta
+    const statePath = join(dir, '.cd-state.json');
+    const st = JSON.parse(readFileSync(statePath, 'utf8'));
+    assert.equal(st.extVersion, '1.2.3', 'state file carries the extension version');
+    st.extVersion = '1.2.2';
+    writeFileSync(statePath, JSON.stringify(st));
+    const s2 = status(dir);
+    assert.equal(s2.extChanged, true, 'status flags recorded-vs-live drift');
+    assert.equal(s2.patchedExtVersion, '1.2.2');
+  } finally { cleanup(base); }
+});
 
 test('verify passes on a pristine fixture (all anchors exact)', () => {
   const dir = stage();
