@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Claude Deck</title>
+<style>
+  /* Stream Deck property-inspector look — self-contained, no external assets */
+  :root { --ink:#d8d8d8; --dim:#9a9a9a; --bg:#2d2d2d; --field:#3d3d3d; --line:#3a3a3a; --clay:#d97757; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 9pt; }
+  .wrap { padding: 10px 12px 14px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .label { width: 84px; text-align: right; color: var(--dim); flex: 0 0 auto; }
+  select { flex: 1 1 auto; background: var(--field); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 4px; padding: 5px 6px; font-size: 9pt; outline: none; }
+  select:focus { border-color: var(--clay); }
+  .hint { margin: 8px 0 0 94px; color: var(--dim); line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row">
+    <div class="label">On press</div>
+    <select id="press"></select>
+  </div>
+  <div class="hint" id="hint"></div>
+</div>
+<script>
+  // Per-action press choices. Values map 1:1 to the ops action-logic.onPress() understands.
+  var OPTIONS = {
+    'com.alisher.claude-deck.model': [
+      { v: 'compact', t: 'Send /compact', d: 'Summarise and shrink the chat you are looking at.' },
+      { v: 'resync', t: 'Resync', d: 'Re-read the current model and effort from the chat.' }
+    ],
+    'com.alisher.claude-deck.effort': [
+      { v: 'thinking', t: 'Toggle thinking', d: 'Turn the thinking indicator on or off.' },
+      { v: 'resync', t: 'Resync', d: 'Re-read the current model and effort from the chat.' }
+    ]
+  };
+  var DEFAULTS = { 'com.alisher.claude-deck.model': 'compact', 'com.alisher.claude-deck.effort': 'thinking' };
+  var ws, context;
+
+  // eslint-disable-next-line no-unused-vars
+  function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+    context = uuid;
+    var ai = {};
+    try { ai = JSON.parse(actionInfo); } catch (e) { ai = {}; }
+    var action = ai.action;
+    var opts = OPTIONS[action] || [];
+    var settings = (ai.payload && ai.payload.settings) || {};
+    var current = settings.press || DEFAULTS[action] || (opts[0] && opts[0].v);
+
+    var sel = document.getElementById('press');
+    var hint = document.getElementById('hint');
+    for (var i = 0; i < opts.length; i++) {
+      var o = document.createElement('option');
+      o.value = opts[i].v; o.textContent = opts[i].t;
+      if (opts[i].v === current) o.selected = true;
+      sel.appendChild(o);
+    }
+    function refreshHint() {
+      for (var j = 0; j < opts.length; j++) if (opts[j].v === sel.value) { hint.textContent = opts[j].d; return; }
+      hint.textContent = '';
+    }
+    refreshHint();
+
+    ws = new WebSocket('ws://127.0.0.1:' + port);
+    ws.onopen = function () { ws.send(JSON.stringify({ event: registerEvent, uuid: uuid })); };
+    sel.addEventListener('change', function () {
+      refreshHint();
+      ws.send(JSON.stringify({ event: 'setSettings', context: context, payload: { press: sel.value } }));
+    });
+  }
+  window.connectElgatoStreamDeckSocket = connectElgatoStreamDeckSocket;
+</script>
+</body>
+</html>

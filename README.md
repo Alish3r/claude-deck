@@ -19,6 +19,8 @@ Press either dial to send `/compact` and shrink the conversation. The little scr
 
 That's the whole idea. No menus, no typing `/model` every time.
 
+The press action is configurable in the Stream Deck settings for each dial: the model dial press defaults to `/compact` (or resync), the effort dial press defaults to toggle-thinking (or resync).
+
 ## Read this first
 
 Unofficial. Not affiliated with or endorsed by Anthropic or Elgato.

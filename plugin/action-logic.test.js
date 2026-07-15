@@ -152,13 +152,29 @@ test('debounced apply targets the window captured at browse time, not focus-at-f
   assert.equal(sent[0].sessionId, 's1');
 });
 
-test('press: model compacts (optimistic), effort toggles thinking', () => {
+test('press defaults: model compacts (optimistic), effort toggles thinking', () => {
   const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', model: 'claude-fable-5', effort: 'low', catalog: CATALOG };
-  const m = rig({ dial: 'model', ts }); m.a.onPress();
+  const m = rig({ dial: 'model', ts }); m.a.onPress();          // no configured action → default
   assert.equal(m.sent[0].op, 'compact');
   assert.equal(m.feedback.at(-1)._raw.ui.phase, 'compacting', 'paints compacting immediately');
   const e = rig({ dial: 'effort', ts }); e.a.onPress();
   assert.equal(e.sent[0].op, 'toggle_thinking');
+});
+
+test('press is configurable per dial (property inspector setting)', () => {
+  const ts = { kind: 'ok', windowId: 'A', sessionId: 's1', model: 'claude-fable-5', effort: 'low', catalog: CATALOG };
+  // model dial set to resync
+  const mr = rig({ dial: 'model', ts }); mr.a.onPress('resync');
+  assert.equal(mr.sent[0].op, 'resync', 'model press → resync when configured');
+  assert.notEqual(mr.feedback.at(-1)._raw.ui.phase, 'compacting', 'resync is not a compacting paint');
+  // effort dial set to resync
+  const er = rig({ dial: 'effort', ts }); er.a.onPress('resync');
+  assert.equal(er.sent[0].op, 'resync', 'effort press → resync when configured');
+  // explicit compact / thinking still route
+  const mc = rig({ dial: 'model', ts }); mc.a.onPress('compact');
+  assert.equal(mc.sent[0].op, 'compact');
+  const et = rig({ dial: 'effort', ts }); et.a.onPress('thinking');
+  assert.equal(et.sent[0].op, 'toggle_thinking');
 });
 
 test('tick advances the compacting spinner only while the focused chat is busy', () => {

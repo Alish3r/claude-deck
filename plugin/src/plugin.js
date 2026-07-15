@@ -96,7 +96,7 @@ class DialBase extends SingletonAction {
   }
 
   onDialRotate(ev) { if (hub) this.controller(ev).onRotate(ev.payload.ticks); }
-  onDialDown(ev) { if (hub) this.controller(ev).onPress(); }
+  onDialDown(ev) { if (hub) this.controller(ev).onPress(ev.payload?.settings?.press); }
 }
 
 class ModelDial extends DialBase { constructor() { super('model', 'com.alisher.claude-deck.model'); } }

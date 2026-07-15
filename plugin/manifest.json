@@ -17,10 +17,11 @@
       "Name": "Model",
       "UUID": "com.alisher.claude-deck.model",
       "Icon": "imgs/actions/model/icon",
+      "PropertyInspectorPath": "ui/press.html",
       "Controllers": ["Encoder"],
       "Encoder": {
         "layout": "layouts/dial.json",
-        "TriggerDescription": { "Rotate": "Browse model", "Push": "/compact" }
+        "TriggerDescription": { "Rotate": "Browse model", "Push": "Press action (configurable)" }
       },
       "States": [{ "Image": "imgs/actions/model/key", "TitleAlignment": "middle" }]
     },
@@ -28,10 +29,11 @@
       "Name": "Effort",
       "UUID": "com.alisher.claude-deck.effort",
       "Icon": "imgs/actions/effort/icon",
+      "PropertyInspectorPath": "ui/press.html",
       "Controllers": ["Encoder"],
       "Encoder": {
         "layout": "layouts/dial.json",
-        "TriggerDescription": { "Rotate": "Set effort (⊙GLOBAL)", "Push": "Toggle thinking" }
+        "TriggerDescription": { "Rotate": "Set effort (⊙GLOBAL)", "Push": "Press action (configurable)" }
       },
       "States": [{ "Image": "imgs/actions/effort/key", "TitleAlignment": "middle" }]
     }

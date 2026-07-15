@@ -90,6 +90,8 @@ async function main() {
   writeFileSync(join(STAGE, 'manifest.json'), JSON.stringify(manifest, null, 2));
   mkdirSync(join(STAGE, 'layouts'), { recursive: true });
   cpSync(join(HERE, 'layouts'), join(STAGE, 'layouts'), { recursive: true });
+  // property-inspector HTML (per-action press-action selector)
+  cpSync(join(HERE, 'ui'), join(STAGE, 'ui'), { recursive: true });
 
   // 3. icons — PNG @1x + @2x
   for (const { base, svg: data, size } of ICONS) {

@@ -126,14 +126,24 @@ export function createDialAction({
       paint({ phase: 'browsing', browseValue });
     },
 
-    onPress() {
+    // pressAction is the property-inspector choice for this dial's push. Defaults keep the
+    // historical behavior: model → /compact, effort → toggle thinking. 'resync' (either dial)
+    // re-snapshots the bridge's live model/effort.
+    onPress(pressAction) {
       lastActivity = Date.now();
-      if (dial === 'model') {
-        // Press = /compact on the focused chat. Paint the compacting state optimistically
-        // for instant feedback; it holds ~1s (tick skips repaints while recently active),
-        // then the live view takes over — a busy chat shows model + spinner (#32).
+      const act = pressAction || (dial === 'model' ? 'compact' : 'thinking');
+      if (act === 'compact') {
+        // Press = /compact on the focused chat. Paint the compacting state optimistically for
+        // instant feedback; it holds ~1s (tick skips repaints while recently active), then the
+        // live view takes over — a busy chat shows model + spinner (#32). Only the model screen
+        // has a compacting layout; on the effort dial fall back to a neutral repaint.
         hub.sendToTarget({ op: 'compact' });
-        paint({ phase: 'compacting' });
+        paint(dial === 'model' ? { phase: 'compacting' } : { phase: 'ok' });
+        return;
+      }
+      if (act === 'resync') {
+        hub.sendToTarget({ op: 'resync' });   // re-read the chat's current model/effort
+        paint({ phase: 'ok' });
         return;
       }
       hub.sendToTarget({ op: 'toggle_thinking' });
