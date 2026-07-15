@@ -20,7 +20,7 @@
       "Controllers": ["Encoder"],
       "Encoder": {
         "layout": "layouts/dial.json",
-        "TriggerDescription": { "Rotate": "Browse model", "Push": "Resync" }
+        "TriggerDescription": { "Rotate": "Browse model", "Push": "/compact" }
       },
       "States": [{ "Image": "imgs/actions/model/key", "TitleAlignment": "middle" }]
     },
