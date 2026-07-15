@@ -210,6 +210,27 @@ Contributions welcome. Especially two things:
 - **Version-anchor updates** when a new Claude Code release moves the patch targets.
 - **Linux and macOS field reports**, I've only run this on Windows so far.
 
+## Built with & references
+
+Standing on Elgato's SDK and a few good libraries.
+
+### Elgato Stream Deck SDK
+
+- [`@elgato/streamdeck`](https://github.com/elgatosf/streamdeck) — the official Node SDK the plugin is written against: encoder actions, `setFeedback`, the plugin WebSocket.
+- [`@elgato/cli`](https://github.com/elgatosf/cli) — Elgato's CLI, used to side-load, stop, and restart the plugin in developer mode.
+- The Elgato SDK docs I actually leaned on while building this:
+  - [Dials & Touch Strip guide](https://docs.elgato.com/streamdeck/sdk/guides/dials/)
+  - [Manifest reference](https://docs.elgato.com/streamdeck/sdk/references/manifest/)
+  - [Getting Started](https://docs.elgato.com/streamdeck/sdk/introduction/getting-started/)
+  - [Plugin WebSocket reference](https://docs.elgato.com/streamdeck/sdk/references/websocket/plugin/)
+  - My condensed, verified notes from those pages live in [docs/STREAMDECK-SDK.md](docs/STREAMDECK-SDK.md).
+
+### Libraries
+
+- [`sharp`](https://github.com/lovell/sharp) — rasterizes the dial SVGs into the PNGs the LCD touch strip displays.
+- [`esbuild`](https://github.com/evanw/esbuild) — bundles the plugin into one self-contained file (no `node_modules` shipped except the native image binary).
+- [`@lydell/node-pty`](https://github.com/lydell/node-pty) — PTY wrapping for the terminal launcher (Windows ConPTY), a maintained fork of Microsoft's [`node-pty`](https://github.com/microsoft/node-pty).
+
 ## License
 
 MIT, plus a [Commons Clause](LICENSE). Read, use, modify, self-host, whatever you want, for free. The one thing you can't do without asking is sell it, resell it, or build a paid product/service around it. Want to do that? Open an issue, let's talk, I'm not trying to block you, I just want to be part of it.
