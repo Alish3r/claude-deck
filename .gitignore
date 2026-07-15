@@ -1,10 +1,12 @@
-# Anthropic extension bundle copies (pristine AND patched) — proprietary code,
-# never distribute. Regenerate from the local install + patcher instead.
-spike/pristine/
-spike/patched/
-
-# User's global Claude settings backup — private config, local reference only
-spike/settings-baseline.json
+# Internal dev-only material — kept locally, never published (reverse-engineering
+# notes, planning, dev harness). Purged from git history 2026-07-15.
+spike/
+CLAUDE.md
+.claude/
+docs/PLAN.md
+docs/STATUS.md
+docs/BRIDGE-PROTOCOL.md
+docs/superpowers/
 
 # Local state / caches
 .claude-flow/
