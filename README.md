@@ -3,9 +3,9 @@
 Physical Stream Deck dials for the Claude Code VS Code extension. Spin a knob, change the model or the reasoning effort on whatever chat you're looking at. Press the dial, it runs `/compact`. That's it, that's the pitch.
 
 <p align="center">
-  <img src="docs/assets/device-preview.png" alt="Claude Deck on-device preview: two LCDs over two dials, model dial (active chat name + current model) on the left, global effort dial on the right" width="480">
+  <img src="docs/assets/banner.png" alt="Claude Deck banner: real on-device render of the two dial LCDs (model on the left headed by the active chat name, global effort on the right) next to a feature list, model per chat, effort honestly global, compact on press, closed-loop writes, works beyond VS Code" width="800">
   <br>
-  <sub>The two dial screens, rendered by the real plugin code. Model on the left (headed by the active chat name), global effort (⊙) on the right.</sub>
+  <sub>The dial render is straight from the real plugin code, not a mockup.</sub>
 </p>
 
 ## What it does
@@ -198,6 +198,6 @@ Contributions welcome. Especially two things:
 
 ## License
 
-[MIT](LICENSE) for the code in this repo.
+MIT, plus a [Commons Clause](LICENSE). Read, use, modify, self-host, whatever you want, for free. The one thing you can't do without asking is sell it, resell it, or build a paid product/service around it. Want to do that? Open an issue, let's talk, I'm not trying to block you, I just want to be part of it.
 
 It does not include, modify-in-repo, or redistribute Anthropic's or Elgato's software. The patcher only rewrites the bundle already installed on your machine.

@@ -1,3 +1,31 @@
+Commons Clause License Condition v1.0
+
+The Software is provided to you by the Licensor under the License, as defined
+below, subject to the following condition.
+
+Without limiting other conditions in the License, the grant of rights under
+the License will not include, and the License does not grant to you, right to
+Sell the Software.
+
+For purposes of the foregoing, "Sell" means practicing any or all of the
+rights granted to you under the License to provide to third parties, for a
+fee or other consideration (including without limitation fees for hosting or
+consulting/support services related to the Software), a product or service
+whose value derives, entirely or substantially, from the functionality of the
+Software. Any license notice or attribution required by the License must also
+include this Commons Clause License Condition notice.
+
+Software:  Claude Deck
+License:   MIT
+Licensor:  Alisher (github.com/Alish3r)
+
+Want to use Claude Deck commercially, resell it, bundle it into a paid
+product, or offer it as part of a hosted/paid service? That's exactly what
+this clause requires you to ask first. Open an issue or reach out, this is
+about being asked and cut in, not about saying no.
+
+--------------------------------------------------------------------------------
+
 MIT License
 
 Copyright (c) 2026 Alisher (github.com/Alish3r)
@@ -19,6 +47,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Note: the MIT grant above literally includes the word "sell" (standard MIT
+boilerplate) - the Commons Clause condition at the top of this file overrides
+that and is the operative restriction. Read both together, the Clause wins.
 
 --------------------------------------------------------------------------------
 
