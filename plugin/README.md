@@ -7,7 +7,7 @@ the focused Claude Code chat via the M2 backend.
 
 ```
 plugin/
-├── manifest.json        # 2 Encoder actions, SDKVersion 3, Node 20, Win10 (StreamDeckPlus = DeviceType 7)
+├── manifest.json        # 2 Encoder actions, SDKVersion 2, Node 20, Win10 (StreamDeckPlus = DeviceType 7)
 ├── layouts/dial.json    # 200×100 layout: title (marquee) / value / icon (glyph) / indicator (gauge)
 ├── src/
 │   ├── plugin.js        # @elgato entry: starts the hub, registers actions, connect()
@@ -23,6 +23,9 @@ plugin/
 
 Model dial → `hub.sendToTarget({op:'set_model'})` (routed to the focused chat). Effort
 dial → **⊙GLOBAL** `settings.json` write locally; `max` also sends `enable_ultracode`.
+
+The Windows input-language key lives in its own plugin now (`../langdeck/`, UUID
+`com.alisher.langcycle`) so deploying it never disturbs these dials — see #29.
 
 ## Verified now (no hardware)
 

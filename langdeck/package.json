@@ -1,0 +1,16 @@
+{
+  "name": "com.alisher.langcycle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lang Cycle — Stream Deck keypad action for the Windows input language.",
+  "main": "src/plugin.js",
+  "dependencies": {
+    "@elgato/streamdeck": "^2.1.0"
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.7.4",
+    "esbuild": "^0.28.1",
+    "sharp": "^0.35.3"
+  }
+}
