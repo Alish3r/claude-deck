@@ -36,6 +36,20 @@
         "TriggerDescription": { "Rotate": "Set effort (⊙GLOBAL)", "Push": "Press action (configurable)" }
       },
       "States": [{ "Image": "imgs/actions/effort/key", "TitleAlignment": "middle" }]
+    },
+    {
+      "Name": "Language",
+      "UUID": "com.alisher.claude-deck.lang",
+      "Icon": "imgs/actions/lang/icon",
+      "Tooltip": "Shows the current Windows input language; press to cycle to the next one.",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/lang/key",
+          "TitleAlignment": "middle",
+          "ShowTitle": false
+        }
+      ]
     }
   ]
 }

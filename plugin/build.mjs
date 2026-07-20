@@ -26,6 +26,7 @@ const svg = (inner, bg = true) =>
 const SPARK = `<path d="M36 16l4.5 13.5L54 34l-13.5 4.5L36 52l-4.5-13.5L18 34l13.5-4.5z" fill="none" stroke="#d97757" stroke-width="3.2" stroke-linejoin="round"/>`;
 const GAUGE = `<path d="M20 46a16 16 0 1 1 32 0" fill="none" stroke="#4fd6be" stroke-width="3.4" stroke-linecap="round"/><path d="M36 46l9-9" stroke="#d97757" stroke-width="3.4" stroke-linecap="round"/><circle cx="36" cy="46" r="2.6" fill="#d97757"/>`;
 const SLIDERS = `<g stroke="#d97757" stroke-width="3.2" stroke-linecap="round"><path d="M22 24h28M22 48h28"/></g><circle cx="30" cy="24" r="4.4" fill="#141518" stroke="#4fd6be" stroke-width="3"/><circle cx="44" cy="48" r="4.4" fill="#141518" stroke="#4fd6be" stroke-width="3"/>`;
+const GLOBE = `<circle cx="36" cy="36" r="17" fill="none" stroke="#4fd6be" stroke-width="3.2"/><ellipse cx="36" cy="36" rx="7.5" ry="17" fill="none" stroke="#4fd6be" stroke-width="2.6"/><path d="M19.5 30h33M19.5 42h33" stroke="#d97757" stroke-width="2.6" stroke-linecap="round"/>`;
 // Elgato requires PNG icons at @1x + @2x. Rasterize the branded SVGs with sharp.
 const ICONS = [
   { base: 'imgs/plugin/marketplace', svg: svg(SLIDERS), size: 288 },
@@ -34,6 +35,8 @@ const ICONS = [
   { base: 'imgs/actions/model/key', svg: svg(SPARK), size: 72 },
   { base: 'imgs/actions/effort/icon', svg: svg(GAUGE), size: 20 },
   { base: 'imgs/actions/effort/key', svg: svg(GAUGE), size: 72 },
+  { base: 'imgs/actions/lang/icon', svg: svg(GLOBE), size: 20 },
+  { base: 'imgs/actions/lang/key', svg: svg(GLOBE), size: 72 },
 ];
 
 // Every file a loadable bundle MUST contain. A partial install (interrupted cpSync, a locked
