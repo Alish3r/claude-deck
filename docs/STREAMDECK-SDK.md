@@ -17,7 +17,9 @@ The plugin is a **real, native Stream Deck plugin**: it installs into the Stream
 
 - **Node runtime:** manifest `Nodejs.Version` accepts **`"20"` or `"24"`**, both documented as supported with no flagged issue. The plan's "avoid 24" caution appears **stale** — treat as re-test-before-trusting, not a hard rule. Default to `"20"` unless a dep needs 24.
 - **`Software.MinimumVersion`:** accepts a range **`6.4`–`7.4`**. `6.6` (plan's value) is valid; pick the lowest that has the encoder/LCD APIs we use.
-- **`SDKVersion`:** new to note — accepts `2 | 3`, **`3` recommended**. Use 3.
+- **`SDKVersion`:** accepts `2 | 3`, but the schema gates it on `Software.MinimumVersion` —
+  at `6.5` it is pinned to `2`; `3` requires `MinimumVersion` >= `6.9`. This plugin targets
+  6.5, so it uses `2`. Keypad actions and `setImage` are fully available under `2`.
 - **OS mins:** `OS: [{Platform:"windows"|"mac", MinimumVersion}]` — Windows 10 is a valid min (our target).
 
 ## Still to verify before M3 build
