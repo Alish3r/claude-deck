@@ -114,6 +114,28 @@ export function createWinLang({ intervalMs = 1500, logger = null, spawnFn = spaw
     } catch (e) { log(`spawn failed: ${e.message}`); return scheduleRespawn(); }
     const myPs = ps;
 
+    // UNREF THE CHILD AND ALL THREE PIPES. This is not tidiness — a spawned child with piped
+    // stdio is FOUR ref'd libuv handles (ProcessWrap + 3 PipeWrap), and shutdown.js's layer 2
+    // depends on every long-lived handle being unref'd so that a CLEAN Stream Deck socket
+    // close — which raises no error and sends no signal, so shutdown.run() never fires — lets
+    // the event loop drain and node exit by itself. The poll interval and the respawn timer
+    // are already unref'd, but the co-process outranks both: without this it becomes the one
+    // handle that pins the process forever, recreating the exact zombie #30 exists to kill —
+    // a node holding the bundle's sharp DLLs plus an orphan powershell.exe, one more per
+    // Stream Deck restart.
+    // Unref'd pipes still deliver data while the loop is alive for other reasons, so READY and
+    // every reply arrive normally.
+    myPs.unref?.();
+    myPs.stdin?.unref?.();
+    myPs.stdout?.unref?.();
+    myPs.stderr?.unref?.();
+    // `write` on a dead child's stdin is discarded silently on Windows, but the stream can also
+    // emit 'error' ASYNCHRONOUSLY, which the try/catch around write() in rawSend cannot catch.
+    // Without this listener that becomes an uncaughtException — and EPIPE is in shutdown.js's
+    // CONNECTION_LOSS set, so it would masquerade as a dropped Stream Deck socket and shut the
+    // plugin down.
+    myPs.stdin?.on?.('error', (e) => log(`stdin error: ${e.message}`));
+
     myPs.on('exit', (code) => {
       if (myGen !== gen) return;            // a stop()/respawn already superseded this process
       log(`co-process exited (code=${code}) — respawning`);
