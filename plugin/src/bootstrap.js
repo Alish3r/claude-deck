@@ -19,6 +19,11 @@ const log = (label, e) => {
   try { writeFileSync(LOG, `[${new Date().toISOString()}] ${label}: ${(e && e.stack) || e}\n`, { flag: 'a' }); } catch { /* ignore */ }
 };
 
+// LOG ONLY — never exit from here. src/shutdown.js (installed by plugin.js once the bundle
+// imports) adds a SECOND listener that exits for connection-loss errors only (#30); node
+// runs every listener, so a real crash is always recorded here first. Exiting on any
+// uncaughtException would hide ordinary bugs behind a silent Stream Deck restart loop,
+// which is the exact failure this log exists to diagnose.
 process.on('uncaughtException', (e) => log('uncaughtException', e));
 process.on('unhandledRejection', (e) => log('unhandledRejection', e));
 log('bootstrap start', `node=${process.version} argv=${JSON.stringify(process.argv.slice(2))}`);

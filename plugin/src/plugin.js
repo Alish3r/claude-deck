@@ -15,6 +15,7 @@ import { renderModelSvg, renderEffortSvg } from './render-lcd.js';
 import { createCliHub } from './cli-hub.js';
 import { pickCompactRoute } from './compact-router.js';
 import { startForegroundPoller, foregroundInfo } from './foreground.js';
+import { createShutdown, installProcessHandlers } from './shutdown.js';
 
 // FALLBACK model catalog for Dial-1 browse. Since patch v3 the bridge snapshot carries
 // the LIVE catalog (claudeConfig.models — exact .value vocabulary incl. [1m] variants)
@@ -103,9 +104,18 @@ class ModelDial extends DialBase { constructor() { super('model', 'com.alisher.c
 class EffortDial extends DialBase { constructor() { super('effort', 'com.alisher.claude-deck.effort'); } }
 
 function main() {
+  // #30: every long-lived handle is registered here so a dropped Stream Deck socket tears
+  // the process down instead of leaving a zombie holding the bundle's sharp DLLs.
+  const shutdown = createShutdown({
+    log: (m) => { try { streamDeck.logger.info(m); } catch { /* pre-connect */ } },
+  });
+  installProcessHandlers(shutdown);
+
   const bridgeHub = createRelayHub({ catalog: CATALOG }); // synchronous object (relay-hub.js)
   const cliHub = createCliHub();
-  startForegroundPoller();                                 // async cache — never blocks the press
+  shutdown.addCloser(() => bridgeHub._stop?.());           // relay result poller
+  shutdown.addCloser(() => cliHub._stop?.());              // cli-hub result poller
+  shutdown.addTimer(startForegroundPoller());              // async cache — never blocks the press
   // Facade: a model-dial PRESS (op:'compact') routes to the foreground CLI session, else the
   // bridge, else a refusal. All other ops pass straight through to the bridge hub, unchanged.
   hub = {
@@ -136,10 +146,14 @@ function main() {
   });
   // repaint on focus/state changes — but skip a dial the user is mid-interaction with,
   // so the live-state resync never clobbers an in-progress browse.
-  setInterval(() => { for (const c of controllers) if (c.ctl.idle()) c.ctl.onUpdate(); }, 500);
+  shutdown.addTimer(setInterval(() => { for (const c of controllers) if (c.ctl.idle()) c.ctl.onUpdate(); }, 500));
   // animation clock: pushes successive frames for continuous states (compacting spinner).
   // tick() is a no-op unless the focused chat is busy, so this idles cheaply.
-  setInterval(() => { for (const c of controllers) c.ctl.tick && c.ctl.tick(); }, 120);
+  shutdown.addTimer(setInterval(() => { for (const c of controllers) c.ctl.tick && c.ctl.tick(); }, 120));
+  // The HTTP hub (src/hub.js) is not instantiated on this path — the plugin talks to the
+  // bridge over the file relay. Registered defensively so it is closed if it is ever wired
+  // in, since a listening server is exactly the kind of handle that pins the event loop.
+  shutdown.addCloser(() => hub && hub.close && hub.close());
 
   streamDeck.actions.registerAction(new ModelDial());
   streamDeck.actions.registerAction(new EffortDial());
