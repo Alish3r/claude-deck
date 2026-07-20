@@ -16,7 +16,13 @@ function fakePs() {
   ps.stderr = new PassThrough();
   ps.written = [];
   ps.answered = new Set();
+  ps.unrefs = [];                 // records which handles were unref'd (see the #34 test below)
+  ps.unref = () => ps.unrefs.push('proc');
+  ps.stdout.unref = () => ps.unrefs.push('stdout');
+  ps.stderr.unref = () => ps.unrefs.push('stderr');
   ps.stdin = { write: (s) => { ps.written.push(s); return true; } };
+  ps.stdin.unref = () => ps.unrefs.push('stdin');
+  ps.stdin.on = (ev, fn) => { (ps.stdinListeners ||= {})[ev] = fn; };
   ps.kill = () => ps.emit('exit', 0);
   ps.say = (line) => ps.stdout.write(line + '\n');
   ps.ready = () => ps.say('READY');
@@ -179,5 +185,42 @@ test('preload is read over the same co-process, not a second PowerShell', async 
   assert.deepEqual(w.getPreload(), ['00000409', '00000419']);
   // And it must NOT have spawned a second PowerShell to read the registry.
   assert.equal(ps.written.filter((s) => s.startsWith('preload ')).length, 1);
+  w.stop();
+});
+
+test('the child AND all three pipes are unref\'d — shutdown.js layer 2 depends on it (#34)', async () => {
+  // A spawned child with piped stdio is FOUR ref'd libuv handles. If any stays ref'd, a CLEAN
+  // Stream Deck socket close (no error, no signal, so shutdown.run() never fires) leaves node
+  // alive forever holding the bundle's sharp DLLs and an orphan powershell.exe — the exact
+  // zombie #30 was written to kill, recreated here because langdeck never got that treatment.
+  const ps = fakePs(); const w = mk(ps);
+  w.start(); await boot(ps);
+  assert.deepEqual([...ps.unrefs].sort(), ['proc', 'stderr', 'stdin', 'stdout'],
+    'every handle the co-process owns must be unref\'d at spawn');
+  w.stop();
+});
+
+test('a respawned co-process is unref\'d too — not just the first one (#34)', async () => {
+  // The respawn path is the one that runs for the rest of the plugin's life; an unref applied
+  // only to the initial spawn would silently regress after the first PowerShell death.
+  const made = [];
+  const w = createWinLang({ intervalMs: 10_000, platform: 'win32', spawnFn: () => { const f = fakePs(); made.push(f); return f; } });
+  w.start(); await boot(made[0]);
+  made[0].emit('exit', 1);                       // arms the 500ms respawn
+  await new Promise((r) => setTimeout(r, 700));
+  assert.equal(made.length, 2, 'no respawn happened — the test asserts nothing');
+  assert.deepEqual([...made[1].unrefs].sort(), ['proc', 'stderr', 'stdin', 'stdout']);
+  w.stop();
+});
+
+test('stdin errors are absorbed — an escaped EPIPE would fake a dropped Stream Deck socket', async () => {
+  // EPIPE is in shutdown.js's CONNECTION_LOSS set. Stream 'error' is emitted ASYNCHRONOUSLY, so
+  // rawSend's try/catch around write() cannot catch it; only this listener can. Without it the
+  // error becomes an uncaughtException that installProcessHandlers classifies as connection
+  // loss, and a dying PowerShell would shut the whole plugin down.
+  const ps = fakePs(); const w = mk(ps);
+  w.start(); await boot(ps);
+  assert.equal(typeof ps.stdinListeners?.error, 'function', 'stdin must have an error listener');
+  assert.doesNotThrow(() => ps.stdinListeners.error(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' })));
   w.stop();
 });

@@ -11,6 +11,7 @@ import sharp from 'sharp'; // native addon — kept external by esbuild, its bin
 import { createWinLang } from './winlang.js';
 import { orderLayouts, nextLayout, langFace, labelFor, normalizeHex, defaultBg } from './lang-logic.js';
 import { renderLangSvg } from './render-lang.js';
+import { createShutdown, installProcessHandlers } from './shutdown.js';
 
 let winlang = null;
 // action.id -> { action, seq, warnUntil, pendingTarget, warnTimer, colours }
@@ -188,8 +189,19 @@ function main() {
     // change (#36); this also covers a PI opened before the co-process had read its first list.
     if (streamDeck.ui.action) pushLanguages();
   });
-  // Without this the co-process outlives the plugin on every Stream Deck restart, and the 4x
-  // import-retry loop would leave one orphan powershell.exe per attempt.
+
+  // #34: process lifecycle. `process.on('exit')` alone (all this file had) fires only when the
+  // process is ALREADY exiting, so it can never CAUSE one — on a dropped Stream Deck socket
+  // langcycle simply ran forever, one zombie per restart, each holding an orphan powershell.exe.
+  // shutdown.js gives the two layers: exit on connection-loss errors/signals, and unref'd
+  // handles so a CLEAN close drains the loop by itself.
+  const shutdown = createShutdown({
+    log: (m) => { try { streamDeck.logger.info(m); } catch { /* pre-connect */ } },
+  });
+  installProcessHandlers(shutdown);
+  shutdown.addCloser(() => { try { winlang && winlang.stop(); } catch { /* already dead */ } });
+  // Kept as well: it still covers exits shutdown.run() does not drive (e.g. bootstrap.js's
+  // import-retry path bailing out), and winlang.stop() is idempotent.
   process.on('exit', () => { try { winlang && winlang.stop(); } catch { /* shutting down */ } });
 
   streamDeck.actions.registerAction(langKey);
