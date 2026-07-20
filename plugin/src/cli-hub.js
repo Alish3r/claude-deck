@@ -37,6 +37,8 @@ export function createCliHub({ dir = tmpdir(), io = defaultIo, now = () => Date.
     let names; try { names = io.readdir(dir).filter((f) => f.startsWith('claude-deck-cli-res-') && f.endsWith('.json')).sort(); } catch { return; }
     for (const f of names) { const p = join(dir, f); let r = null; try { r = JSON.parse(io.read(p)); } catch { /* torn */ } try { io.unlink(p); } catch { continue; } if (r) for (const cb of listeners) cb(r); }
   }
+  // unref'd (#30) — see relay-hub.js: a poller must never keep the process alive alone.
   const timer = setInterval(_pollResults, resultPollMs);
-  return { liveMarkers, sendCompact, onResult, _pollResults, _stop: () => clearInterval(timer) };
+  timer.unref?.();
+  return { liveMarkers, sendCompact, onResult, _pollResults, _timer: timer, _stop: () => clearInterval(timer) };
 }

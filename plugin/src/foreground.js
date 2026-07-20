@@ -32,5 +32,7 @@ async function refresh() {
 }
 let refreshing = false;   // non-overlap guard: skip a tick if the prior refresh is still running
 async function refreshGuarded() { if (refreshing) return; refreshing = true; try { await refresh(); } finally { refreshing = false; } }
-export function startForegroundPoller({ intervalMs = 1500 } = {}) { refreshGuarded(); return setInterval(refreshGuarded, intervalMs); }
+// unref'd (#30): a background cache must never be the handle that keeps the plugin process
+// alive after the Stream Deck socket drops. Returned so the caller can clear it on shutdown.
+export function startForegroundPoller({ intervalMs = 1500 } = {}) { refreshGuarded(); const t = setInterval(refreshGuarded, intervalMs); t.unref?.(); return t; }
 export function foregroundInfo() { return cache; }   // read the cache — synchronous, non-blocking, on the press path

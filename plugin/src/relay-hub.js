@@ -182,7 +182,10 @@ export function createRelayHub({
       }
     } catch { /* dir gone */ }
   }
+  // unref'd (#30): the result poller must not pin the event loop open after the Stream Deck
+  // socket drops, which is how the plugin used to orphan a node process on every restart.
   const timer = setInterval(pollResults, resultPollMs);
+  timer.unref?.();
 
-  return { sendToTarget, targetState, onResult, _pollResults: pollResults, _stop: () => clearInterval(timer) };
+  return { sendToTarget, targetState, onResult, _pollResults: pollResults, _timer: timer, _stop: () => clearInterval(timer) };
 }
