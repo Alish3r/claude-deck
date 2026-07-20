@@ -1,5 +1,4 @@
-# Shell scripts and Swift sources in the macOS hand-off package MUST stay LF.
-# CRLF makes bash on macOS fail with "bad interpreter: no such file or directory",
-# which is a baffling first error for an external tester to hit.
-langdeck/macos/*.sh    text eol=lf
-langdeck/macos/*.swift text eol=lf
+# The macOS hand-off package goes to a Mac. Everything in it MUST stay LF.
+# CRLF makes bash fail with "bad interpreter: no such file or directory" — a baffling
+# first error for an external tester, and it would look like our code is broken.
+langdeck/macos/** text eol=lf
