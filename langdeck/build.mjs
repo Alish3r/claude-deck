@@ -42,6 +42,7 @@ const EXPECT = [
   'bin/bootstrap.js', 'bin/plugin.js',
   'bin/node_modules/sharp/package.json',
   'bin/node_modules/@img/sharp-win32-x64/package.json',
+  'ui/inspector.html',
   ...ICONS.flatMap(({ base }) => [`${base}.png`, `${base}@2x.png`]),
 ];
 function verifyBundle(root, label) {
@@ -103,8 +104,13 @@ async function main() {
   //     so crash-handler registration always runs before the real bundle is imported.
   cpSync(join(HERE, 'src', 'bootstrap.js'), join(STAGE, 'bin', 'bootstrap.js'));
 
-  // 2. manifest (CodePath -> the bootstrap, which imports the bundle). No layouts/ or ui/:
-  //    this plugin has a single Keypad action with no property inspector.
+  // 1d. property inspector — plain HTML, no build step, copied verbatim (#36). It is in
+  //     EXPECT above: a missing PI is a silent partial install (the key still works, the
+  //     colour panel is just blank), which is exactly the drift verifyBundle exists to catch.
+  cpSync(join(HERE, 'ui'), join(STAGE, 'ui'), { recursive: true });
+
+  // 2. manifest (CodePath -> the bootstrap, which imports the bundle). No layouts/: this
+  //    plugin has a single Keypad action.
   const manifest = JSON.parse(readFileSync(join(HERE, 'manifest.json'), 'utf8'));
   manifest.CodePath = 'bin/bootstrap.js';
   writeFileSync(join(STAGE, 'manifest.json'), JSON.stringify(manifest, null, 2));

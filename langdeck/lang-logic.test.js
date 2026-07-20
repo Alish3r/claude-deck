@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   normalizeHkl, primaryLangId, labelFor, colourFor, langFace,
   orderLayouts, nextLayout, parseStateLine,
+  inkFor, normalizeHex, defaultBg, INK, DIM, INK_DARK,
 } from './src/lang-logic.js';
 
 test('normalizeHkl: uppercases and zero-pads to 8 hex chars', () => {
@@ -116,4 +117,87 @@ test('parseStateLine: garbage returns null rather than throwing', () => {
   assert.equal(parseStateLine(''), null);
   assert.equal(parseStateLine('READY'), null);
   assert.equal(parseStateLine(null), null);
+});
+
+// --- configurable per-language colours (#36) ---
+
+test('colourFor: an override map wins over the pinned default', () => {
+  assert.equal(colourFor('EN', { EN: '#7a5cff' }).bg, '#7a5cff');
+  assert.equal(colourFor('RU', { RU: '#0b6b3a' }).bg, '#0b6b3a');
+});
+
+test('colourFor: a language absent from the override map keeps its old face exactly', () => {
+  const noSettings = colourFor('RU');
+  const otherLangSet = colourFor('RU', { EN: '#7a5cff' });
+  assert.deepEqual(otherLangSet, noSettings);
+  assert.deepEqual(noSettings, { bg: '#d97757', ink: INK }, 'RU clay + INK, unchanged by #36');
+  assert.deepEqual(colourFor('EN'), { bg: '#1e3a5f', ink: INK });
+  assert.deepEqual(colourFor('DE'), { bg: '#141518', ink: INK }, 'unpinned falls back to neutral');
+  assert.deepEqual(colourFor(null), { bg: '#141518', ink: DIM }, 'unknown language stays dimmed');
+});
+
+test('colourFor: a malformed override falls back rather than emitting fill="undefined"', () => {
+  const fallback = colourFor('EN');
+  for (const bad of [null, undefined, '', 'red', '#12', '#1234567', '#12345', 42, {}, ['#fff']]) {
+    assert.deepEqual(colourFor('EN', { EN: bad }), fallback, `override ${JSON.stringify(bad)} rejected`);
+  }
+});
+
+test('colourFor: a garbage override CONTAINER does not throw', () => {
+  for (const bad of [null, undefined, 'nope', 42, ['#fff'], true]) {
+    assert.deepEqual(colourFor('EN', bad), { bg: '#1e3a5f', ink: INK });
+  }
+  assert.deepEqual(colourFor(null, { EN: '#7a5cff' }), { bg: '#141518', ink: DIM });
+});
+
+test('colourFor: shorthand and unprefixed hex are accepted and normalized', () => {
+  assert.equal(colourFor('EN', { EN: '#FFF' }).bg, '#ffffff');
+  assert.equal(colourFor('EN', { EN: 'AABBCC' }).bg, '#aabbcc');
+  assert.equal(colourFor('EN', { EN: '  #Ff0000  ' }).bg, '#ff0000');
+});
+
+test('colourFor: ink contrast flips with the chosen background', () => {
+  assert.equal(colourFor('EN', { EN: '#ffffff' }).ink, INK_DARK, 'white bg -> dark ink');
+  assert.equal(colourFor('EN', { EN: '#ffe08a' }).ink, INK_DARK, 'pale yellow -> dark ink');
+  assert.equal(colourFor('EN', { EN: '#000000' }).ink, INK, 'black bg -> light ink');
+  assert.equal(colourFor('EN', { EN: '#123456' }).ink, INK, 'deep blue -> light ink');
+  assert.notEqual(INK, INK_DARK);
+});
+
+test('inkFor: the chosen ink always has the better contrast ratio of the two', () => {
+  const lum = (hex) => {
+    const ch = (i) => {
+      const c = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(1) + 0.0722 * ch(2);
+  };
+  const ratio = (a, b) => {
+    const [hi, lo] = lum(a) >= lum(b) ? [lum(a), lum(b)] : [lum(b), lum(a)];
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  // Sweep the grey ramp: whatever inkFor returns must be the better of the two everywhere.
+  for (let v = 0; v <= 255; v += 15) {
+    const bg = '#' + v.toString(16).padStart(2, '0').repeat(3);
+    const picked = inkFor(bg);
+    const other = picked === INK ? INK_DARK : INK;
+    assert.ok(ratio(bg, picked) >= ratio(bg, other), `${bg}: picked ${picked} over ${other}`);
+  }
+  assert.ok(ratio('#ffffff', inkFor('#ffffff')) > 4.5, 'white bg gets a readable ink');
+});
+
+test('normalizeHex: rejects everything that is not a 3- or 6-digit hex colour', () => {
+  assert.equal(normalizeHex('#AbCdEf'), '#abcdef');
+  assert.equal(normalizeHex('#abcd'), null);
+  assert.equal(normalizeHex('#ggg'), null);
+  assert.equal(normalizeHex('rgb(1,2,3)'), null);
+  assert.equal(normalizeHex(null), null);
+  assert.equal(normalizeHex(0xffffff), null);
+});
+
+test('defaultBg: reports the swatch the PI should open on', () => {
+  assert.equal(defaultBg('EN'), '#1e3a5f');
+  assert.equal(defaultBg('RU'), '#d97757');
+  assert.equal(defaultBg('DE'), '#141518');
+  assert.equal(defaultBg(undefined), '#141518');
 });

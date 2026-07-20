@@ -9,13 +9,44 @@
 import streamDeck, { SingletonAction } from '@elgato/streamdeck';
 import sharp from 'sharp'; // native addon — kept external by esbuild, its binary copied by build.mjs
 import { createWinLang } from './winlang.js';
-import { orderLayouts, nextLayout, langFace } from './lang-logic.js';
+import { orderLayouts, nextLayout, langFace, labelFor, normalizeHex, defaultBg } from './lang-logic.js';
 import { renderLangSvg } from './render-lang.js';
 
 let winlang = null;
-const langContexts = new Map();   // action.id -> { action, seq, warnUntil, pendingTarget, warnTimer }
+// action.id -> { action, seq, warnUntil, pendingTarget, warnTimer, colours }
+// `colours` is the per-key override map from this action's settings (#36) — per CONTEXT, like
+// everything else here, so two Language keys on one profile can hold different maps.
+const langContexts = new Map();
 
 const WARN_MS = 4000;
+
+// Settings arrive from disk and from the property inspector, so they are untrusted: keep only
+// entries that are a real language label mapped to a real hex colour. A garbage or partially
+// garbage map degrades to "fewer overrides", never to a broken face.
+function sanitizeColours(settings) {
+  const raw = settings && typeof settings === 'object' ? settings.colours : null;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out = {};
+  for (const [label, value] of Object.entries(raw)) {
+    const hex = normalizeHex(value);
+    if (hex && /^[A-Z0-9]{2,3}$/.test(label)) out[label] = hex;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+// The languages ACTUALLY installed on this machine, in the same order the key cycles them.
+// The PI cannot enumerate these itself — only the co-process can (GetKeyboardLayoutList), so
+// the plugin pushes them (#36). Deduped: en-US + en-GB are two layouts but one "EN" swatch.
+function detectedLanguages() {
+  const s = winlang && winlang.getState();
+  const ordered = orderLayouts(s && s.list, winlang && winlang.getPreload());
+  const seen = [];
+  for (const hkl of ordered) {
+    const label = labelFor(hkl);
+    if (label && !seen.includes(label)) seen.push(label);
+  }
+  return seen;
+}
 
 // Returns the data URI; it deliberately does NOT push to the device. The caller checks its
 // sequence number and only then calls setImage — pushing inside this helper would make the
@@ -24,6 +55,17 @@ async function langPng(face) {
   const svg = renderLangSvg(face);
   const png = await sharp(Buffer.from(svg), { density: 384 }).resize(144, 144).png().toBuffer();
   return `data:image/png;base64,${png.toString('base64')}`;
+}
+
+// streamDeck.ui.sendToPropertyInspector is the only sender in 2.1.0 (Action has no such
+// method — see node_modules/@elgato/streamdeck/dist/plugin/ui.d.ts:47); it is a no-op unless
+// a PI for this plugin is visible, so calling it unconditionally is safe.
+function pushLanguages() {
+  const languages = detectedLanguages();
+  const defaults = {};
+  for (const l of languages) defaults[l] = defaultBg(l);
+  Promise.resolve(streamDeck.ui.sendToPropertyInspector({ event: 'languages', languages, defaults }))
+    .catch((e) => { try { streamDeck.logger.error(`lang PI push failed: ${e.message}`); } catch { /* pre-connect */ } });
 }
 
 // Lazy lifecycle: the co-process exists only while at least one Language key is on a page.
@@ -45,7 +87,7 @@ class LangKey extends SingletonAction {
   // painting A's warn dot onto B.
   ctx(action) {
     if (!langContexts.has(action.id)) {
-      langContexts.set(action.id, { action, seq: 0, warnUntil: 0, pendingTarget: null, warnTimer: null });
+      langContexts.set(action.id, { action, seq: 0, warnUntil: 0, pendingTarget: null, warnTimer: null, colours: null });
     }
     return langContexts.get(action.id);
   }
@@ -56,15 +98,37 @@ class LangKey extends SingletonAction {
     const c = this.ctx(action);
     const seq = ++c.seq;
     const face = langFace(winlang && winlang.getState(), c.warnUntil);
+    face.colours = c.colours;   // per-key overrides, threaded through as data (render-lang.js)
     langPng(face)
       .then((uri) => { if (seq === c.seq) return action.setImage(uri); })
       .catch((e) => { try { streamDeck.logger.error(`lang paint failed: ${e.message}`); } catch { /* pre-connect */ } });
   }
 
   async onWillAppear(ev) {
-    this.ctx(ev.action);
+    const c = this.ctx(ev.action);
+    c.colours = sanitizeColours(ev.payload && ev.payload.settings);
     startWinLang();                    // lazy: nothing runs until a Language key is placed
     this.repaint(ev.action);
+  }
+
+  // Fires when the Stream Deck app pushes settings back — including right after the PI's
+  // setSettings. This is what makes a colour change repaint IMMEDIATELY (#36).
+  onDidReceiveSettings(ev) {
+    const c = this.ctx(ev.action);
+    c.colours = sanitizeColours(ev.payload && ev.payload.settings);
+    this.repaint(ev.action);
+  }
+
+  // The PI asks (getLanguages) as well as being told here, because PropertyInspectorDidAppear
+  // can land before the PI's own websocket has finished registering — the reply would go
+  // nowhere and the user would see an empty list.
+  onPropertyInspectorDidAppear(ev) {
+    pushLanguages();
+  }
+
+  onSendToPlugin(ev) {
+    const p = ev.payload;
+    if (p && p.event === 'getLanguages') pushLanguages();
   }
 
   onWillDisappear(ev) {
@@ -118,7 +182,12 @@ function main() {
   // startWinLang() runs on the first onWillAppear so a user with no Language key placed pays
   // nothing (measured idle cost of an always-on co-process: ~67MB working set).
   winlang = createWinLang({ intervalMs: 1500, logger: streamDeck.logger });
-  winlang.onChange(() => { for (const c of langContexts.values()) langKey.repaint(c.action); });
+  winlang.onChange(() => {
+    for (const c of langContexts.values()) langKey.repaint(c.action);
+    // A language added/removed in Windows while the PI is open must show up without a plugin
+    // change (#36); this also covers a PI opened before the co-process had read its first list.
+    if (streamDeck.ui.action) pushLanguages();
+  });
   // Without this the co-process outlives the plugin on every Stream Deck restart, and the 4x
   // import-retry loop would leave one orphan powershell.exe per attempt.
   process.on('exit', () => { try { winlang && winlang.stop(); } catch { /* shutting down */ } });
