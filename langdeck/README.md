@@ -18,6 +18,8 @@ langdeck/
 │   ├── winlang.js       # persistent PowerShell co-process (input-language read/write)
 │   ├── lang-logic.js    # pure: HKL -> label/colour, Preload ordering, cycle wrap
 │   └── render-lang.js   # render 72x72 language key face -> SVG
+├── ui/
+│   └── inspector.html   # property inspector: per-language colour pickers (no build step)
 └── package.json         # @elgato/streamdeck ^2.x
 ```
 
@@ -28,6 +30,10 @@ langdeck/
 - Cycle order follows `HKCU\Keyboard Layout\Preload`, falling back to numeric HKL sort.
 - The face is correct **within 1.5s**, not instantly: an external switch (physical `Alt+Shift`,
   tray click, focus change) is picked up on the next poll.
+- **Colours** default to EN slate `#1e3a5f`, RU clay `#d97757`, everything else the neutral
+  `#141518`. The property inspector lists the languages the plugin actually detected on this
+  machine and lets you override the background per language, stored per key — two Language keys
+  can differ. Text colour is derived from the chosen background for contrast, not configured.
 - **Elevated windows:** Stream Deck runs non-elevated and Windows UIPI blocks `PostMessage` into
   elevated windows, so switching silently fails for admin apps. Detected via read-back mismatch
   and shown as a warn dot rather than a false language.

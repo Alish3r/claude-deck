@@ -10,7 +10,9 @@ const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // state: 'ok' | 'unknown' | 'starting' | 'single' | 'warn'
-export function renderLangSvg({ label, state = 'ok' }) {
+// `colours` is the per-key override map from action settings ({ EN: '#123456', … }), threaded
+// through as DATA — this module still knows nothing about settings or the SDK.
+export function renderLangSvg({ label, state = 'ok', colours = null }) {
   const placeholder = state === 'starting' ? '…' : '—';
   const raw = label ? String(label) : placeholder;
   const text = esc(raw);
@@ -19,7 +21,7 @@ export function renderLangSvg({ label, state = 'ok' }) {
   // colourFor(null) already returns the neutral background + dim ink, so there is no second
   // literal here — an inline fallback is how the invented '#1b1d22' slipped past the
   // "no new colours invented" locked decision the first time.
-  const { bg, ink: fg } = colourFor(known ? label : null);
+  const { bg, ink: fg } = colourFor(known ? label : null, colours);
   // Measure the RAW label, not the escaped one: esc('A&B') is 7 chars and would wrongly
   // trigger the small face. A 2-char code is the common case; longer unmapped hex codes
   // (labelFor's fallback maxes at 3 chars) drop a size.

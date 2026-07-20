@@ -19,6 +19,7 @@
       "Icon": "imgs/actions/lang/icon",
       "Tooltip": "Shows the current Windows input language; press to cycle to the next one.",
       "Controllers": ["Keypad"],
+      "PropertyInspectorPath": "ui/inspector.html",
       "States": [
         {
           "Image": "imgs/actions/lang/key",

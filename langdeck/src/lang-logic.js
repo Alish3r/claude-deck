@@ -47,9 +47,66 @@ export function labelFor(hkl) {
   return PRIMARY[p] ?? p.toString(16).toUpperCase().padStart(2, '0');
 }
 
-export function colourFor(label) {
+// Ink used when a chosen background is too LIGHT for INK to read against. Deliberately the
+// existing neutral key colour (build.mjs:25) rather than a fresh near-black — locked decision
+// #6 ("no new colours invented") still applies to colours the plugin picks for itself; the
+// user's own background is the only new colour in the system.
+export const INK_DARK = NEUTRAL;
+
+// '#abc' | '#aabbcc' -> '#aabbcc' (lowercase). Anything else -> null. The override map comes
+// from action settings, i.e. from disk and from the property inspector, so it is untrusted:
+// every consumer below treats a non-string / malformed / missing entry as "not configured"
+// and falls back, rather than rendering `fill="undefined"` into the SVG.
+export function normalizeHex(value) {
+  if (typeof value !== 'string') return null;
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+  if (!m) return null;
+  const h = m[1].toLowerCase();
+  return `#${h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h}`;
+}
+
+// WCAG relative luminance of an '#rrggbb' string.
+function luminance(hex) {
+  const h = normalizeHex(hex);
+  if (!h) return 0;
+  const chan = (i) => {
+    const c = parseInt(h.slice(1 + i * 2, 3 + i * 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * chan(0) + 0.7152 * chan(1) + 0.0722 * chan(2);
+}
+
+const contrast = (a, b) => {
+  const [hi, lo] = luminance(a) >= luminance(b) ? [luminance(a), luminance(b)] : [luminance(b), luminance(a)];
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+// Picks whichever of the two existing inks reads better on `bg` — one decision per language
+// in the PI (#36), no second picker. Contrast RATIO rather than a luminance threshold: the
+// two inks are not symmetric around mid-grey, so a fixed 0.5 cutoff picks wrong on mid tones.
+export function inkFor(bg) {
+  return contrast(bg, INK) >= contrast(bg, INK_DARK) ? INK : INK_DARK;
+}
+
+// PURE: `overrides` is passed in (from action settings) — this never reads settings itself,
+// because it is the unit-tested core and plugin.js is the only place allowed to do I/O (#36).
+// Automatic ink applies ONLY to user-chosen backgrounds. The pinned EN/RU faces keep INK
+// verbatim so an unconfigured key looks EXACTLY as it did before this feature existed —
+// inkFor('#d97757') actually prefers the dark ink, so deriving it here would silently
+// restyle every existing RU key.
+export function colourFor(label, overrides) {
   if (!label) return { bg: NEUTRAL, ink: DIM };
+  const custom = overrides && typeof overrides === 'object' && !Array.isArray(overrides)
+    ? normalizeHex(overrides[label])
+    : null;
+  if (custom) return { bg: custom, ink: inkFor(custom) };
   return { bg: PINNED[label] ?? NEUTRAL, ink: INK };
+}
+
+// The defaults the PI shows as each language's starting swatch, so an unconfigured key's
+// picker opens on the colour actually on the key rather than on black.
+export function defaultBg(label) {
+  return PINNED[label] ?? NEUTRAL;
 }
 
 // Derives the key face from co-process state. Lives HERE, not in plugin.js, because it is the

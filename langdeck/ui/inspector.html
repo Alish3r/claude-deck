@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Lang Cycle</title>
+<style>
+  /* Stream Deck property-inspector look — self-contained, no external assets, no build step
+     (there is no bundler for the PI; this file is copied verbatim into the .sdPlugin). */
+  :root { --ink:#d8d8d8; --dim:#9a9a9a; --bg:#2d2d2d; --field:#3d3d3d; --line:#3a3a3a; --clay:#d97757; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 9pt; }
+  .wrap { padding: 10px 12px 14px; }
+  .head { color: var(--dim); margin-bottom: 8px; line-height: 1.4; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .label { width: 46px; text-align: right; color: var(--ink); font-weight: 600; flex: 0 0 auto; }
+  input[type=color] { flex: 0 0 auto; width: 44px; height: 24px; padding: 0; cursor: pointer;
+    background: var(--field); border: 1px solid var(--line); border-radius: 4px; }
+  .hex { flex: 0 0 auto; color: var(--dim); font-family: Consolas, monospace; width: 66px; }
+  .reset { flex: 0 0 auto; background: none; border: 1px solid var(--line); border-radius: 4px;
+    color: var(--dim); font-size: 8pt; padding: 3px 7px; cursor: pointer; }
+  .reset:hover { color: var(--ink); border-color: var(--clay); }
+  .empty { color: var(--dim); line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head" id="head">Reading installed languages…</div>
+  <div id="list"></div>
+</div>
+<script>
+  // ES5-flavoured on purpose: the PI runs in whatever webview the Stream Deck app embeds.
+  var ws, context, action, colours = {}, defaults = {};
+
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  // The plugin owns persistence; the PI only ever writes the whole map back. Sending settings
+  // (rather than a custom sendToPlugin op) is what makes the plugin's onDidReceiveSettings
+  // fire, which is what repaints the key immediately.
+  function save() {
+    send({ event: 'setSettings', context: context, payload: { colours: colours } });
+  }
+
+  function colourOf(lang) { return colours[lang] || defaults[lang] || '#141518'; }
+
+  // Only languages the PLUGIN reported are ever drawn: the PI cannot enumerate Windows input
+  // languages itself, so an empty list means "not detected yet", not "none installed".
+  function render(languages) {
+    var list = document.getElementById('list');
+    var head = document.getElementById('head');
+    list.innerHTML = '';
+    if (!languages.length) {
+      head.textContent = '';
+      list.innerHTML = '<div class="empty">No input languages detected yet. '
+        + 'Place the key on a page and reopen this panel.</div>';
+      return;
+    }
+    head.textContent = 'Background colour per installed input language. '
+      + 'Text colour is chosen automatically for contrast.';
+    for (var i = 0; i < languages.length; i++) render1(list, languages[i]);
+  }
+
+  function render1(list, lang) {
+    var row = document.createElement('div');
+    row.className = 'row';
+
+    var name = document.createElement('div');
+    name.className = 'label';
+    name.textContent = lang;
+
+    var pick = document.createElement('input');
+    pick.type = 'color';
+    pick.value = colourOf(lang);
+
+    var hex = document.createElement('span');
+    hex.className = 'hex';
+    hex.textContent = pick.value;
+
+    var reset = document.createElement('button');
+    reset.className = 'reset';
+    reset.textContent = 'Default';
+
+    // 'input' fires while dragging in the picker — that is the live repaint the issue asks
+    // for. Writing settings on every frame would be chatty, so 'change' (picker closed) is
+    // what persists; the plugin repaints from settings either way.
+    pick.addEventListener('input', function () { hex.textContent = pick.value; });
+    pick.addEventListener('change', function () {
+      colours[lang] = pick.value;
+      hex.textContent = pick.value;
+      save();
+    });
+    reset.addEventListener('click', function () {
+      delete colours[lang];               // absent => plugin falls back to the built-in default
+      pick.value = colourOf(lang);
+      hex.textContent = pick.value;
+      save();
+    });
+
+    row.appendChild(name); row.appendChild(pick); row.appendChild(hex); row.appendChild(reset);
+    list.appendChild(row);
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+    context = uuid;
+    var ai = {};
+    try { ai = JSON.parse(actionInfo); } catch (e) { ai = {}; }
+    action = ai.action;
+    var settings = (ai.payload && ai.payload.settings) || {};
+    colours = (settings.colours && typeof settings.colours === 'object') ? settings.colours : {};
+
+    ws = new WebSocket('ws://127.0.0.1:' + port);
+    ws.onopen = function () {
+      send({ event: registerEvent, uuid: uuid });
+      // Ask explicitly. propertyInspectorDidAppear can fire on the plugin side BEFORE this
+      // socket is registered, in which case the plugin's unprompted push is dropped and the
+      // list would stay empty forever.
+      send({ event: 'sendToPlugin', context: uuid, action: action, payload: { event: 'getLanguages' } });
+    };
+    ws.onmessage = function (e) {
+      var msg = {};
+      try { msg = JSON.parse(e.data); } catch (err) { return; }
+      if (msg.event === 'sendToPropertyInspector' && msg.payload && msg.payload.event === 'languages') {
+        defaults = msg.payload.defaults || {};
+        render(msg.payload.languages || []);
+      } else if (msg.event === 'didReceiveSettings') {
+        var s = (msg.payload && msg.payload.settings) || {};
+        colours = (s.colours && typeof s.colours === 'object') ? s.colours : {};
+      }
+    };
+  }
+  window.connectElgatoStreamDeckSocket = connectElgatoStreamDeckSocket;
+</script>
+</body>
+</html>
