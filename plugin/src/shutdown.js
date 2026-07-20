@@ -25,9 +25,16 @@
 //      (app quit — no error at all) the event loop simply drains and node exits by itself.
 
 // Socket-level codes that mean "the Stream Deck connection is gone". Deliberately narrow:
-// this process opens exactly one socket (the SD websocket) — the relay hub is file-based
-// and the foreground poller uses execFile — so these codes cannot plausibly come from
-// anything else. Anything outside this set is left to bootstrap.js's crash log.
+// this process opens exactly one socket (the SD websocket) — the relay hub is file-based and
+// the foreground poller talks to its co-process over pipes, not sockets — so these codes
+// cannot plausibly come from anything else. Anything outside this set is left to
+// bootstrap.js's crash log.
+//
+// NOTE (#28): the foreground co-process's stdin pipe CAN raise EPIPE if PowerShell dies at the
+// wrong moment, and EPIPE is in the set above — so an escaped one would masquerade as a dropped
+// Stream Deck socket and shut the plugin down. A try/catch around the write is NOT what stops
+// that (stream errors are emitted asynchronously and cannot be caught that way); the explicit
+// `stdin.on('error')` listener in win-foreground.js is. Do not remove it.
 const CONNECTION_LOSS = ['ECONNRESET', 'EPIPE', 'ECONNREFUSED', 'ECONNABORTED'];
 const CODE_RE = new RegExp(`\\b(${CONNECTION_LOSS.join('|')})\\b`);
 
