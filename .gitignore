@@ -25,3 +25,6 @@ plugin/bin/
 *.sdplugin-stage/
 plugin/dist/
 plugin/logs/
+
+# local hand-off artifacts (zips for external testers)
+dist-share/
