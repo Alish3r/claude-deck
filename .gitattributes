@@ -1,0 +1,4 @@
+# The macOS hand-off package goes to a Mac. Everything in it MUST stay LF.
+# CRLF makes bash fail with "bad interpreter: no such file or directory" — a baffling
+# first error for an external tester, and it would look like our code is broken.
+langdeck/macos/** text eol=lf
