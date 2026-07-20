@@ -14,7 +14,7 @@ import { setEffort, defaultSettingsPath } from '../../patch/effort.js';
 import { renderModelSvg, renderEffortSvg } from './render-lcd.js';
 import { createCliHub } from './cli-hub.js';
 import { pickCompactRoute } from './compact-router.js';
-import { startForegroundPoller, foregroundInfo } from './foreground.js';
+import { startForegroundPoller, stopForegroundPoller, foregroundInfo } from './foreground.js';
 import { createShutdown, installProcessHandlers } from './shutdown.js';
 
 // FALLBACK model catalog for Dial-1 browse. Since patch v3 the bridge snapshot carries
@@ -115,7 +115,10 @@ function main() {
   const cliHub = createCliHub();
   shutdown.addCloser(() => bridgeHub._stop?.());           // relay result poller
   shutdown.addCloser(() => cliHub._stop?.());              // cli-hub result poller
-  shutdown.addTimer(startForegroundPoller());              // async cache — never blocks the press
+  // async cache — never blocks the press. The logger is forwarded so the co-process's
+  // respawn/timeout diagnostics reach the Stream Deck log instead of nowhere.
+  shutdown.addTimer(startForegroundPoller({ logger: streamDeck.logger }));
+  shutdown.addCloser(() => stopForegroundPoller());        // #28: kills the foreground co-process
   // Facade: a model-dial PRESS (op:'compact') routes to the foreground CLI session, else the
   // bridge, else a refusal. All other ops pass straight through to the bridge hub, unchanged.
   hub = {
