@@ -1,0 +1,31 @@
+{
+  "UUID": "com.alisher.langcycle",
+  "SDKVersion": 2,
+  "Author": "alisher",
+  "Name": "Lang Cycle",
+  "Version": "0.1.0.0",
+  "Description": "Shows the current Windows input language; press to cycle to the next installed layout.",
+  "Category": "Lang Cycle",
+  "CategoryIcon": "imgs/plugin/category",
+  "Icon": "imgs/plugin/marketplace",
+  "Nodejs": { "Version": "20" },
+  "CodePath": "src/plugin.js",
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }],
+  "Actions": [
+    {
+      "Name": "Language",
+      "UUID": "com.alisher.langcycle.lang",
+      "Icon": "imgs/actions/lang/icon",
+      "Tooltip": "Shows the current Windows input language; press to cycle to the next one.",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/lang/key",
+          "TitleAlignment": "middle",
+          "ShowTitle": false
+        }
+      ]
+    }
+  ]
+}

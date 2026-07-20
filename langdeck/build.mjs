@@ -1,10 +1,11 @@
-// Build + side-load the Claude Deck Stream Deck plugin.
-//   node plugin/build.mjs            # bundle -> assemble .sdPlugin -> install into SD Plugins
-//   node plugin/build.mjs --no-install
+// Build + side-load the Lang Cycle Stream Deck plugin.
+//   node langdeck/build.mjs            # bundle -> assemble .sdPlugin -> install into SD Plugins
+//   node langdeck/build.mjs --no-install
 //
-// esbuild bundles src/plugin.js into one self-contained file (inlines @elgato/streamdeck
-// and the patch/effort.js dep), so the .sdPlugin has no node_modules and no repo-relative
-// imports. Icons are branded SVGs (Claude clay + teal).
+// Same shape as plugin/build.mjs (the Claude Deck dials), but this is a SEPARATE plugin with
+// its own UUID, so deploying the language key never touches the dials and vice versa (#29).
+// esbuild bundles src/plugin.js into one self-contained file; the .sdPlugin has no repo-relative
+// imports. sharp stays external (native addon) and its dependency closure is copied below.
 
 import { build } from 'esbuild';
 import sharp from 'sharp';
@@ -12,8 +13,8 @@ import { mkdirSync, rmSync, cpSync, writeFileSync, readFileSync, existsSync } fr
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const HERE = dirname(fileURLToPath(import.meta.url));            // .../plugin
-const UUID = 'com.alisher.claude-deck';
+const HERE = dirname(fileURLToPath(import.meta.url));            // .../langdeck
+const UUID = 'com.alisher.langcycle';
 const STAGE = join(HERE, 'dist', `${UUID}.sdPlugin`);
 const home = process.env.USERPROFILE || process.env.HOME;
 const SD_PLUGINS = join(home, 'AppData', 'Roaming', 'Elgato', 'StreamDeck', 'Plugins');
@@ -23,21 +24,17 @@ const install = !process.argv.includes('--no-install');
 const svg = (inner, bg = true) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72">` +
   (bg ? `<rect width="72" height="72" rx="14" fill="#141518"/>` : '') + inner + `</svg>`;
-const SPARK = `<path d="M36 16l4.5 13.5L54 34l-13.5 4.5L36 52l-4.5-13.5L18 34l13.5-4.5z" fill="none" stroke="#d97757" stroke-width="3.2" stroke-linejoin="round"/>`;
-const GAUGE = `<path d="M20 46a16 16 0 1 1 32 0" fill="none" stroke="#4fd6be" stroke-width="3.4" stroke-linecap="round"/><path d="M36 46l9-9" stroke="#d97757" stroke-width="3.4" stroke-linecap="round"/><circle cx="36" cy="46" r="2.6" fill="#d97757"/>`;
-const SLIDERS = `<g stroke="#d97757" stroke-width="3.2" stroke-linecap="round"><path d="M22 24h28M22 48h28"/></g><circle cx="30" cy="24" r="4.4" fill="#141518" stroke="#4fd6be" stroke-width="3"/><circle cx="44" cy="48" r="4.4" fill="#141518" stroke="#4fd6be" stroke-width="3"/>`;
+const GLOBE = `<circle cx="36" cy="36" r="17" fill="none" stroke="#4fd6be" stroke-width="3.2"/><ellipse cx="36" cy="36" rx="7.5" ry="17" fill="none" stroke="#4fd6be" stroke-width="2.6"/><path d="M19.5 30h33M19.5 42h33" stroke="#d97757" stroke-width="2.6" stroke-linecap="round"/>`;
 // Elgato requires PNG icons at @1x + @2x. Rasterize the branded SVGs with sharp.
 const ICONS = [
-  { base: 'imgs/plugin/marketplace', svg: svg(SLIDERS), size: 288 },
-  { base: 'imgs/plugin/category', svg: svg(SLIDERS), size: 28 },
-  { base: 'imgs/actions/model/icon', svg: svg(SPARK), size: 20 },
-  { base: 'imgs/actions/model/key', svg: svg(SPARK), size: 72 },
-  { base: 'imgs/actions/effort/icon', svg: svg(GAUGE), size: 20 },
-  { base: 'imgs/actions/effort/key', svg: svg(GAUGE), size: 72 },
+  { base: 'imgs/plugin/marketplace', svg: svg(GLOBE), size: 288 },
+  { base: 'imgs/plugin/category', svg: svg(GLOBE), size: 28 },
+  { base: 'imgs/actions/lang/icon', svg: svg(GLOBE), size: 20 },
+  { base: 'imgs/actions/lang/key', svg: svg(GLOBE), size: 72 },
 ];
 
 // Every file a loadable bundle MUST contain. A partial install (interrupted cpSync, a locked
-// dir, a missed icon) ships a green build that shows "?" on the dials — exactly the failure
+// dir, a missed icon) ships a green build that shows "?" on the key — exactly the failure
 // this guards against. Verified on BOTH the stage and the installed copy; missing anything
 // throws instead of silently shipping. Icons come from ICONS so the list can't drift.
 const EXPECT = [
@@ -45,15 +42,13 @@ const EXPECT = [
   'bin/bootstrap.js', 'bin/plugin.js',
   'bin/node_modules/sharp/package.json',
   'bin/node_modules/@img/sharp-win32-x64/package.json',
-  'layouts/dial.json',
-  'ui/press.html',
   ...ICONS.flatMap(({ base }) => [`${base}.png`, `${base}@2x.png`]),
 ];
 function verifyBundle(root, label) {
   const missing = EXPECT.filter((p) => !existsSync(join(root, ...p.split('/'))));
   if (missing.length) {
     throw new Error(`${label} is INCOMPLETE — ${missing.length} file(s) missing:\n  ${missing.join('\n  ')}\n`
-      + `A partial bundle shows "?" on the dials. Stop the plugin first (npx @elgato/cli stop ${UUID}) and re-run the build.`);
+      + `A partial bundle shows "?" on the key. Stop the plugin first (npx @elgato/cli stop ${UUID}) and re-run the build.`);
   }
   console.log(`${label}: ${EXPECT.length} expected files present ✓`);
 }
@@ -99,24 +94,20 @@ async function main() {
   };
   copyPkg('sharp');
   copyPkg('@img/sharp-win32-x64'); // the win32 native binary IS required on this platform
-  // macOS is EXPERIMENTAL and unshipped: a Mac build would also need the darwin sharp binary
-  // (@img/sharp-darwin-arm64 / -x64) copied here, plus mac added to manifest.OS. Untested — the
-  // packaged bundle is Windows-only today. See README § Maturity.
-  if (missing.length) throw new Error(`bin/node_modules is missing required packages: ${missing.join(', ')} — run npm install in plugin/`);
+  // This plugin is Windows-only by design (winlang.js posts WM_INPUTLANGCHANGEREQUEST via
+  // PowerShell); there is no macOS/Linux build to add sharp binaries for. See README.
+  if (missing.length) throw new Error(`bin/node_modules is missing required packages: ${missing.join(', ')} — run npm install in langdeck/`);
   console.log(`bin/node_modules: ${[...copied].sort().join(', ')}`);
 
   // 1c. bootstrap.js is hand-written (not bundled) — copy verbatim; it becomes CodePath
   //     so crash-handler registration always runs before the real bundle is imported.
   cpSync(join(HERE, 'src', 'bootstrap.js'), join(STAGE, 'bin', 'bootstrap.js'));
 
-  // 2. manifest (CodePath -> the bootstrap, which imports the bundle) + layout
+  // 2. manifest (CodePath -> the bootstrap, which imports the bundle). No layouts/ or ui/:
+  //    this plugin has a single Keypad action with no property inspector.
   const manifest = JSON.parse(readFileSync(join(HERE, 'manifest.json'), 'utf8'));
   manifest.CodePath = 'bin/bootstrap.js';
   writeFileSync(join(STAGE, 'manifest.json'), JSON.stringify(manifest, null, 2));
-  mkdirSync(join(STAGE, 'layouts'), { recursive: true });
-  cpSync(join(HERE, 'layouts'), join(STAGE, 'layouts'), { recursive: true });
-  // property-inspector HTML (per-action press-action selector)
-  cpSync(join(HERE, 'ui'), join(STAGE, 'ui'), { recursive: true });
 
   // 3. icons — PNG @1x + @2x
   for (const { base, svg: data, size } of ICONS) {
@@ -135,13 +126,13 @@ async function main() {
     // A RUNNING plugin locks its dir: a throwing rmSync used to abort AFTER gutting part
     // of the install. Try the clean swap; if locked, fall back to copy-over-in-place
     // (cpSync overwrites files without deleting the dir) and tell the user to restart:
-    //   npx @elgato/cli stop com.alisher.claude-deck   (before building) avoids this.
+    //   npx @elgato/cli stop com.alisher.langcycle   (before building) avoids this.
     let cleanSwap = true;
     try { rmSync(dest, { recursive: true, force: true }); } catch { cleanSwap = false; }
     cpSync(STAGE, dest, { recursive: true });
-    verifyBundle(dest, 'installed bundle'); // catch a partial copy (locked/interrupted) before it shows "?" on the dials
+    verifyBundle(dest, 'installed bundle'); // catch a partial copy (locked/interrupted) before it shows "?" on the key
     console.log(`installed: ${dest}${cleanSwap ? '' : ' (dir was locked — overwrote in place; stale files may remain)'}`);
-    console.log('Restart the plugin to load it: npx @elgato/cli restart com.alisher.claude-deck');
+    console.log('Restart the plugin to load it: npx @elgato/cli restart com.alisher.langcycle');
   }
 }
 main().catch((e) => { console.error(e); process.exit(1); });
